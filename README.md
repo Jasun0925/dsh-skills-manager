@@ -110,7 +110,7 @@ The generic `<project>/skills` directory is labeled **Project Skills** and also 
 
 ## DSH product ecosystem
 
-For a desktop workbench, download [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop/releases). Existing [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) installations can add plugins as needed by following each project's README. Below are 11 first-party plugins and a third-party app market; consult the corresponding desktop release notes and bundled catalog for what that version includes.
+For a desktop workbench, download [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop/releases). Existing [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) installations can add plugins as needed by following each project's README. Below are 11 first-party plugins; consult the corresponding desktop release notes and bundled catalog for what that version includes.
 
 | Plugin | What you can do |
 | --- | --- |
@@ -125,7 +125,6 @@ For a desktop workbench, download [DSH Codex Desktop](https://github.com/Micheng
 | [PUA](https://github.com/MichengAI/dsh-pua) | Guide the Agent to try new approaches after failures, investigate causes, and verify results before completion |
 | [Code Review](https://github.com/MichengAI/dsh-code-review) | Use `/review` to request an independent Agent code review and receive the report in the current conversation |
 | [Codex Pet](https://github.com/MichengAI/dsh-codex-pet) | View conversation notifications and respond to tool approvals and questions through a desktop pet |
-| [App Market](https://www.npmjs.com/package/dshmarket) | Third-party app market for discovering, installing, and managing DSH plugins |
 
 ## Feedback and contributions
 
