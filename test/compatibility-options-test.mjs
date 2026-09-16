@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { mkdtemp, readdir, rm, readFile } from "node:fs/promises";
 import { parseOptions } from "../scripts/compatibility-options.mjs";
+import { sameExistingPath, resolveTempRoot } from "../scripts/compat-paths.mjs";
 import { assertHostPeers, supportedHosts, peerRange, developmentHost } from "../scripts/hosts.mjs";
 assert.deepEqual(parseOptions(["--keep"]).versions, supportedHosts);
 assert.equal(parseOptions(["--keep", supportedHosts[0]]).keep, true);
@@ -40,4 +41,11 @@ try {
   assert.match(result.stderr, /PATH 中找不到可运行的 npm/);
   assert.deepEqual(await readdir(temp), []);
 } finally { await rm(temp, { recursive: true, force: true }); }
+const pathRoot = await mkdtemp(join(tmpdir(), "skills-compat-path-"));
+try {
+  const resolved = await resolveTempRoot(pathRoot);
+  assert.equal(await sameExistingPath(pathRoot, resolved), true);
+  assert.equal(await sameExistingPath(pathRoot, join(pathRoot, ".", "nested", "..")), true);
+  assert.equal(await sameExistingPath(pathRoot, join(pathRoot, "missing")), false);
+} finally { await rm(pathRoot, { recursive: true, force: true }); }
 console.log("兼容参数、必需 peer 与缺失工具回归通过");

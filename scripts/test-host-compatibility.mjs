@@ -25,6 +25,7 @@ import assert from "node:assert/strict";
 
 import { supportedHosts as supported } from "./hosts.mjs";
 import { parseOptions, usage } from "./compatibility-options.mjs";
+import { resolveTempRoot, sameExistingPath } from "./compat-paths.mjs";
 let options;
 try {
   options = parseOptions(process.argv.slice(2));
@@ -95,7 +96,8 @@ async function findTool(name) {
 }
 const npm = await findTool("npm");
 const pnpm = await findTool("pnpm");
-const sandbox = await mkdtemp(join(tmpdir(), `dsh-skills-compat-${version}-`));
+const tempRoot = await resolveTempRoot(tmpdir());
+const sandbox = await resolveTempRoot(await mkdtemp(join(tempRoot, `dsh-skills-compat-${version}-`)));
 const env = {
   ...process.env,
   DSH_HOME: join(sandbox, "home"),
@@ -111,8 +113,8 @@ for (const key of [
 ]) {
   env[`DSH_${key}_HOME`] = join(env.USERPROFILE, key.toLowerCase());
 }
-const workspace = join(sandbox, "workspace");
-await mkdir(workspace, { recursive: true });
+await mkdir(join(sandbox, "workspace"), { recursive: true });
+const workspace = await resolveTempRoot(join(sandbox, "workspace"));
 // 先验证普通工作区，随后补 Git 标记验证两种根目录规则一致。
 await mkdir(env.USERPROFILE, { recursive: true });
 
@@ -408,7 +410,15 @@ try {
     "活动 Agent 停用后模型与用户调用策略刷新、恢复启用、源文件不变",
   );
   const scopedState = await request("/api/dsh-skills-manager/state");
-  const projectRoot = scopedState.data.roots.find((item) => item.kind === "project-dsh" && item.path === join(workspace, ".dsh", "skills"));
+  const expectedProjectPath = join(workspace, ".dsh", "skills");
+  const projectRoots = scopedState.data.roots.filter((item) => item.kind === "project-dsh");
+  let projectRoot;
+  for (const item of projectRoots) {
+    if (await sameExistingPath(item.path, expectedProjectPath)) {
+      projectRoot = item;
+      break;
+    }
+  }
   assert(projectRoot, "真实 Agent 的项目来源可管理");
   assert.equal(snapshot.scoped.content, "PROJECT_BODY");
   async function toggleScoped(root, enabled) {
@@ -495,7 +505,7 @@ try {
     !options.keep &&
     !options.serve
   ) {
-    const rel = relative(resolve(tmpdir()), sandbox);
+    const rel = relative(tempRoot, sandbox);
     assert(
       rel && !rel.startsWith("..") && !isAbsolute(rel),
       "清理路径必须位于临时目录内",

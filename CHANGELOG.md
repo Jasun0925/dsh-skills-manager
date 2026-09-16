@@ -4,6 +4,11 @@
 
 The five most recent published versions are listed below.
 
+## 0.1.52 - 2026-09-16
+
+- Add support for DeepSeek Harness `0.1.6-alpha.1` while retaining support for the five previously supported versions; skill discovery, enable/disable policies, and management workflows remain unchanged.
+- Canonicalize isolated-host sandbox paths so Windows 8.3 temp directories still match project skill roots in CI.
+
 ## 0.1.51 - 2026-09-16
 
 - Add support for DeepSeek Harness `0.1.6-alpha.1` while retaining support for the five previously supported versions; skill discovery, enable/disable policies, and management workflows remain unchanged.
@@ -22,9 +27,3 @@ The five most recent published versions are listed below.
 ## 0.1.48 - 2026-09-11
 
 - Add support for DeepSeek Harness `0.1.5-rc.2` while retaining support for the four previously supported versions; skill discovery, enable/disable policies, and management workflows remain unchanged.
-
-## 0.1.47 - 2026-09-10
-
-- Centralize supported Host versions and validate package metadata, required peers, and README consistency; retain the exact four tested RC versions and development dependencies.
-- Harden real-Host regression tooling with complete argument parsing, single-version browser serving, tool discovery, process shutdown, sandbox cleanup, and retained evidence; add a manually triggered four-version Windows CI matrix.
-- Align CI peer installation settings with the lockfile and correct README Node.js badges and requirements; plugin runtime behavior is unchanged.
