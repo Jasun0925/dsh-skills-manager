@@ -35,9 +35,10 @@ try {
   client.apply({ effect() {}, slots: { inject(name, fn) { fn(); }, register(options, fn) { component = fn; } } });
   const t = (key, params = {}) => (client.DICT.zh[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? "{" + name + "}"));
   let tree;
+  let snapshotFor = (id) => ({ current: id });
   function render() {
     state = outerState; cursor = 0;
-    const view = component({ t, useSessions: (selector) => selector({ current: currentSession }) });
+    const view = component({ t, useSessions: (selector) => selector(snapshotFor(currentSession)) });
     if (mountedKey !== view.props.key) { mountedKey = view.props.key; innerState = []; }
     state = innerState; cursor = 0; tree = view.type(view.props);
   }
@@ -199,4 +200,24 @@ try {
   resolveOld(); await new Promise((resolve) => setImmediate(resolve)); render();
   assert.ok(rows().includes("project-b") && !rows().includes("project-a"), "旧会话的慢响应不会覆盖当前会话");
   console.log("当前会话绑定、Tab、项目隔离、筛选记忆和创建目标交互回归通过");
+
+  snapshotFor = (id) => id
+    ? { ids: [id], byId: { [id]: { retainedBy: { mainView: 1 } } } }
+    : { ids: [], byId: {} };
+  outerState.length = 0;
+  innerState = [];
+  mountedKey = undefined;
+  currentSession = "session-a";
+  globalThis.fetch = async (_, options) => ({ ok: true, json: async () => ({ data: sessionData(options) }) });
+  render(); effects.splice(0).forEach((effect) => effect());
+  await new Promise((resolve) => setImmediate(resolve)); render();
+  tab("项目技能");
+  expandAll();
+  assert.deepEqual(rows(), ["project-a"], "alpha.2 主视图保留会话能打开项目技能");
+  await selectSession("session-b");
+  expandAll();
+  assert.deepEqual(rows(), ["project-b"], "alpha.2 切换主视图会话后项目技能跟着变");
+  await selectSession(undefined);
+  assert.ok(find((node) => node.children.includes(t("project.empty"))), "alpha.2 没有主视图会话时项目页为空");
+  console.log("alpha.2 retainedBy.mainView 会话绑定通过");
 } finally { globalThis.fetch = originalFetch; }

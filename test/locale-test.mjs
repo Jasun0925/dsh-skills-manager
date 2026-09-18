@@ -728,6 +728,29 @@ eq(bundle.nextScopeTab("trash", "ArrowRight"), "trash", "right arrow stays on th
 eq(bundle.nextScopeTab("trash", "ArrowLeft"), "project", "left arrow returns to projects");
 eq(bundle.nextScopeTab("user", "End"), "trash", "End opens the last tab");
 eq(bundle.nextScopeTab("project", "Home"), "user", "Home moves to the first tab");
+ok(typeof bundle.currentSessionId === "function", "factory exports currentSessionId");
+eq(bundle.currentSessionId({ current: "legacy-session" }), "legacy-session", "currentSessionId reads the pre-alpha.2 current field");
+eq(
+  bundle.currentSessionId({
+    ids: ["other", "main"],
+    byId: {
+      other: { retainedBy: { sidebar: 1 } },
+      main: { retainedBy: { mainView: 1 } },
+    },
+  }),
+  "main",
+  "currentSessionId follows retainedBy.mainView on 0.1.6-alpha.2",
+);
+eq(
+  bundle.currentSessionId({
+    current: "legacy-session",
+    byId: { main: { retainedBy: { mainView: 1 } } },
+  }),
+  "legacy-session",
+  "currentSessionId prefers the legacy current field when both exist",
+);
+eq(bundle.currentSessionId({ byId: { other: { retainedBy: { sidebar: 1 } } } }), undefined, "currentSessionId ignores non-main retains");
+eq(bundle.currentSessionId({}), undefined, "currentSessionId is absent without a current session");
 ok(bundle.canToggleSource({ key: "copilot", toggleable: true }), "user Agent sources keep a source toggle");
 ok(bundle.canToggleSource({ key: "project-copilot:abc", kind: "project-copilot", toggleable: true }), "read-only project Agent sources expose a source toggle");
 ok(!bundle.canToggleSource({ key: "dsh", toggleable: true }), "user DSH has no source-wide toggle");

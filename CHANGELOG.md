@@ -4,6 +4,12 @@
 
 The five most recent published versions are listed below.
 
+## 0.1.53 - 2026-09-18
+
+- Fix the empty Project tab on official DeepSeek Harness `0.1.6-alpha.2`. Session lists no longer expose a current-session field; the tab now follows the session shown in the main view, while older hosts keep the previous current-session binding.
+- Add support for DeepSeek Harness `0.1.6-alpha.2` while retaining the six previously supported versions.
+- Use a bilingual package.json description matching the GitHub repository.
+
 ## 0.1.52 - 2026-09-16
 
 - Add support for DeepSeek Harness `0.1.6-alpha.1` while retaining support for the five previously supported versions; skill discovery, enable/disable policies, and management workflows remain unchanged.
@@ -23,7 +29,3 @@ The five most recent published versions are listed below.
 - Prioritize project copies over global copies and toggle each source independently. Another enabled copy can take over when one is disabled, with the active source identified in the UI; invocation is blocked only when all copies are disabled.
 - Give Global, Project, and Trash separate tabs, group skills into collapsible sources, hide long descriptions, and remove redundant information. Creation and import always save to global DSH; generic project `skills/` directories use a neutral source label.
 - Fix update buttons and dialogs not following language changes, and align Trash date formatting and import-warning separators with the UI language.
-
-## 0.1.48 - 2026-09-11
-
-- Add support for DeepSeek Harness `0.1.5-rc.2` while retaining support for the four previously supported versions; skill discovery, enable/disable policies, and management workflows remain unchanged.
