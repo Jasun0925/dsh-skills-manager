@@ -50,6 +50,8 @@ try {
   }
   function nodes(node = tree) {
     if (!node || typeof node !== "object") return [];
+    // 筛选业务测试只驱动受控值；官方菜单交互由专用测试与真实浏览器验证。
+    if (node.type?.name === "SourceSelect") return [{ type: "select-fixture", props: { "aria-label": node.props.label, options: node.props.options, onChange: event => node.props.onChange(event.target.value) }, children: [] }];
     if (typeof node.type === "function") return nodes(node.type({ ...node.props, children: node.children }));
     return [node, ...node.children.flatMap((child) => nodes(child))];
   }
@@ -66,6 +68,14 @@ try {
   assert.ok(nodes(groups()[0]).some((node) => node.children.includes("1 个技能")), "来源数量使用翻译文案");
   expandAll();
   assert.deepEqual(rows(), ["global-one", "global-two"]);
+  const states = nodes().filter((node) => node.props.className === "dssm-row-state");
+  assert.equal(states.length, 2, "每条技能都有独立状态操作组");
+  assert.ok(nodes(states[0]).some((node) => node.props.role === "switch"), "开关和状态位于同一组");
+  const more = find((node) => node.props["aria-label"] === t("btn.more"));
+  assert.ok(more.props.options.some((option) => option.value === "trash" && option.danger), "可写技能的更多菜单提供回收入口");
+  more.props.onChange({ target: { value: "trash" } }); render();
+  assert.ok(find((node) => node.props.role === "dialog"), "回收菜单仍先打开确认弹窗");
+  find((node) => node.type === "button" && node.children.includes(t("btn.cancel"))).props.onClick(); render();
   assert.ok(!JSON.stringify(nodes()).includes("LONG_DESCRIPTION_global-one"), "展开来源后仍不显示长描述");
   groups()[0].props.onClick(); render();
   assert.deepEqual(rows(), ["global-two"], "来源可独立折叠");
@@ -115,6 +125,26 @@ try {
   await new Promise((resolve) => setImmediate(resolve));
   assert.ok(toggleRequest.url.endsWith("/disable"));
   assert.deepEqual(toggleRequest.body, { root: "a-copilot", name: "project-a" }, "只停用对应来源，不修改赢家策略");
+  render();
+  const operationFeedback = () => find((node) => node.props.className === "dssm-feedback" && node.children.includes(t("result.updated")));
+  assert.ok(operationFeedback(), "操作结果显示在发起操作的页面");
+  tab("技能仓库");
+  assert.equal(operationFeedback(), undefined, "仓库页不显示其他页面的操作结果");
+  tab("回收站");
+  assert.equal(operationFeedback(), undefined, "回收站不显示技能页的操作结果");
+  tab("项目技能");
+  let completePendingToggle;
+  const fetchBeforePending = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (options?.method === "POST" && url.endsWith("/disable")) await new Promise((resolve) => { completePendingToggle = resolve; });
+    return fetchBeforePending(url, options);
+  };
+  find((node) => node.props.role === "switch" && node.props["aria-label"] === t("skill.toggle") + " project-a").props.onClick();
+  tab("技能仓库");
+  completePendingToggle(); await new Promise((resolve) => setImmediate(resolve)); render();
+  assert.equal(operationFeedback(), undefined, "操作在切换页签后完成也不能污染仓库提示");
+  globalThis.fetch = fetchBeforePending;
+  tab("项目技能");
   delete projectCopy.shadowedBy;
   projectCopy.enabled = false;
   projectCopy.fallbackTo = { root: "copilot", name: "project-a", scope: "user" };
@@ -129,7 +159,7 @@ try {
   assert.equal(find((node) => node.props.className === "dssm-note dssm-fallback"), undefined, "无接管来源时不显示提示");
   projectCopy.enabled = true;
   render();
-  assert.equal(nodes().filter((node) => node.props.role === "tab").length, 3, "回收站与两个技能视图同级");
+  assert.equal(nodes().filter((node) => node.props.role === "tab").length, 4, "仓库、回收站与两个技能视图同级");
   data.trash.push(
     { id: "trash-a", name: "removed-a", deletedAt: "2026-09-12T00:00:00Z", root: { scope: "project", projectName: "A" } },
     { id: "trash-b", name: "removed-b", deletedAt: "2026-09-12T00:00:00Z", root: { scope: "user" } },

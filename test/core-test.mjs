@@ -344,7 +344,7 @@ ok(
   "settings panel registers a skill search input",
 );
 ok(
-  clientSource.includes('className: "dssm-control dssm-search"'),
+  clientSource.includes('className: "dssm-input dssm-search"'),
   "search field follows the source-first filter layout",
 );
 ok(
@@ -366,8 +366,8 @@ ok(
   "category filter exposes an accessible label",
 );
 ok(
-  /h\(\s*"select"/.test(clientSource),
-  "category filter uses native keyboard selection",
+  clientSource.includes("primitives.Menu"),
+  "筛选菜单委托官方组件处理键盘导航",
 );
 const packageJson = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),

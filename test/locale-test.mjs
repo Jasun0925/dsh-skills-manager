@@ -204,7 +204,7 @@ ok(
   "feedback link opens safely with a localized accessible name",
 );
 ok(
-  /\.dssm-feedback-link:focus-visible\{outline:2px solid var\(--dsw-alias-state-success-primary\);outline-offset:2px\}/.test(
+  /\.dssm-feedback-link:focus-visible\{outline:2px solid var\(--dsw-alias-brand-primary,[^;]+;outline-offset:2px\}/.test(
     source,
   ),
   "feedback link has a visible keyboard focus style",
@@ -724,9 +724,10 @@ eq(
 eq(bundle.nextScopeTab("user", "ArrowLeft"), "user", "left arrow stays on the first tab");
 eq(bundle.nextScopeTab("user", "ArrowRight"), "project", "right arrow moves to the next tab");
 eq(bundle.nextScopeTab("project", "ArrowRight"), "trash", "right arrow opens the trash tab");
-eq(bundle.nextScopeTab("trash", "ArrowRight"), "trash", "right arrow stays on the last tab");
+eq(bundle.nextScopeTab("trash", "ArrowRight"), "repositories", "右箭头进入仓库页签");
+eq(bundle.nextScopeTab("repositories", "ArrowRight"), "repositories", "最后一个页签保持边界");
 eq(bundle.nextScopeTab("trash", "ArrowLeft"), "project", "left arrow returns to projects");
-eq(bundle.nextScopeTab("user", "End"), "trash", "End opens the last tab");
+eq(bundle.nextScopeTab("user", "End"), "repositories", "End 进入最后一个页签");
 eq(bundle.nextScopeTab("project", "Home"), "user", "Home moves to the first tab");
 ok(typeof bundle.currentSessionId === "function", "factory exports currentSessionId");
 eq(bundle.currentSessionId({ current: "legacy-session" }), "legacy-session", "currentSessionId reads the pre-alpha.2 current field");
