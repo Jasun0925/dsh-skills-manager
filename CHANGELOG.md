@@ -2,7 +2,15 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
-The five most recent published versions are listed below.
+Recent changes are listed below; 0.1.54 is prepared for release.
+
+## 0.1.54 - 2026-09-21
+
+- Add public GitHub skill repositories with direct archive downloads, verified caching, safe installation, file-level update previews, local-edit protection and backup rollback.
+- Recover interrupted installation tracking only after verifying the complete local skill directory; preserve modified files and report disk-write failures explicitly.
+- Combine refresh and update checks, avoid duplicate catalog loads and file hashing, and keep repository downloads out of the local mutation queue.
+- Improve source filters, compact skill rows, scoped feedback and bilingual messages. Keep theme-token fallbacks for older hosts and explain archive limits and backup retention.
+- Keep public documentation focused on product usage; exclude internal handoffs and machine-specific test evidence.
 
 ## 0.1.53 - 2026-09-18
 

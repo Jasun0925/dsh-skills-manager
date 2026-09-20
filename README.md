@@ -21,12 +21,14 @@
 
 ## Features
 
+
 Bring skills from your computer and projects into DSH without switching between Agent folders.
 
 - **Manage in one place**: browse collapsible source groups, search, read, and toggle skills.
 - **Global and project skills**: the project tab follows the current session, with project copies taking priority over global copies.
 - **Reuse existing skills**: supports Codex, Claude Code, Copilot, and other agents without modifying their source files when toggled.
 - **Create and import**: create a skill or import ZIP archives, folders, and `SKILL.md` files into global DSH.
+- **Skill repositories**: discover public GitHub skills, install without overwriting local files, review updates and restore backups. [Repository guide (Chinese)](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/02-%E6%8A%80%E8%83%BD%E4%BB%93%E5%BA%93%E7%AE%A1%E7%90%86.md).
 - **Recover deleted skills**: DSH skills go to Trash first, so accidental deletions can be restored.
 
 ## Screenshots
@@ -67,7 +69,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 Restart DSH, refresh the page, and open **Settings → Skills**. To update, select **Check for updates** or run the installation command again.
 
-- Plugin `0.1.53` is tested with DeepSeek Harness `0.1.0-rc.8`, `0.1.1-rc.2`, `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.6-alpha.1`, `0.1.6-alpha.2`.
+- Plugin `0.1.54` is tested with DeepSeek Harness `0.1.0-rc.8`, `0.1.1-rc.2`, `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.6-alpha.1`, `0.1.6-alpha.2`.
 
 ## Usage
 

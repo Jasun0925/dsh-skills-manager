@@ -28,6 +28,8 @@
 - **复用已有技能**：支持 Codex、Claude Code、Copilot 等常见 Agent，启停不会修改它们的源文件。
 - **创建与导入**：新建技能，或导入 ZIP、技能文件夹和 `SKILL.md`，统一保存到全局 DSH。
 - **回收与恢复**：删除 DSH 技能后先进入回收站，误删可找回。
+- **技能仓库**：添加公开 GitHub 仓库，按来源折叠浏览、搜索、查看详情并逐项安装；同名不覆盖，刷新不自动更新本地。详见[仓库使用说明](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/02-%E6%8A%80%E8%83%BD%E4%BB%93%E5%BA%93%E7%AE%A1%E7%90%86.md)。
+
 
 ## 界面预览
 
@@ -67,7 +69,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 安装后重启 DSH 并刷新页面，打开「设置 → 技能」即可使用。更新时可点击「检查更新」，或重新执行安装命令。
 
-- `0.1.53` 已验证兼容 DeepSeek Harness `0.1.0-rc.8`、`0.1.1-rc.2`、`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.6-alpha.1`、`0.1.6-alpha.2`。
+- `0.1.54` 已验证兼容 DeepSeek Harness `0.1.0-rc.8`、`0.1.1-rc.2`、`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.6-alpha.1`、`0.1.6-alpha.2`。
 
 ## 使用说明
 
