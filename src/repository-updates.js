@@ -118,7 +118,7 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
   }
   return {
     sources,
-    preview: async input => { const p = await prepare(input); return { token: p.token, commit: p.commit, localModified: p.localModified, changes: p.changes, rollback: input.rollback === true }; },
+    preview: input => serialize(async () => { const p = await prepare(input); return { token: p.token, commit: p.commit, localModified: p.localModified, changes: p.changes, rollback: input.rollback === true }; }),
     update: input => serialize(() => replace(input)),
     rollback: input => serialize(() => replace(input, true)),
   };

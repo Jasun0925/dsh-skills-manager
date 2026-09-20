@@ -109,7 +109,7 @@ async function readResponse(response, limit) {
 export function createRepositoryManager({ fetchImpl = globalThis.fetch, log } = {}) {
   const file = join(managerHomePath(), "repositories.json");
   let queue = Promise.resolve();
-  const serialize = (task) => { const run = async () => { await recoverPending(); return task(); }; const next = queue.then(run, run); queue = next.catch(() => {}); return next; };
+  const serialize = (task, recover = true) => { const run = async () => { if (recover) await recoverPending(); return task(); }; const next = queue.then(run, run); queue = next.catch(() => {}); return next; };
   async function read() {
     try {
       const homeInfo = await fs.lstat(managerHomePath());
@@ -239,13 +239,13 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log } = 
       if (data.repositories.length >= 30) throw failure("最多添加 30 个仓库");
       const repo = { ...source, id, skills: [], commit: null, refreshedAt: null, error: null };
       data.repositories.push(repo); await write(data); return repo;
-    }),
+    }, false),
     remove: ({ id }) => serialize(async () => {
       const data = await read(); const repo = repository(data, id);
       for (const record of data.installs.filter(i => i.id === id)) record.source ||= { owner: repo.owner, name: repo.name, ref: repo.ref, subdirectory: repo.subdirectory };
       data.repositories = data.repositories.filter((r) => r.id !== id);
       await write(data); return { id };
-    }),
+    }, false),
     refresh: ({ id }) => serialize(async () => {
       const data = await read(), repo = repository(data, id);
       try {
@@ -274,7 +274,7 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log } = 
         catch (error) { if (log) await log("repository.cache.cleanup.failed", { repository: repo.id, error: error.message }); else console.warn("仓库旧缓存未清理：" + error.message); }
       }
       return repo;
-    }),
+    }, false),
     detail: async ({ id, path }) => {
       const repo = repository(await read(), id), skill = repo.skills.find((s) => s.path === path);
       if (!skill) throw failure("技能不在仓库列表中");

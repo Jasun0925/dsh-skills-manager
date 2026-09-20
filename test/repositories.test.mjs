@@ -66,6 +66,12 @@ try {
   };
   try { await assert.rejects(manager.install({ id: added.id, path: "skills/docx" }), /安装|状态/); }
   finally { fileSystem.rename = originalRename; }
+  const statePath = join(process.env.DSH_HOME, "skills-manager/repositories.json");
+  const extraRepo = await restartManager.add({ url: "example/other" });
+  assert.equal(JSON.parse(await readFile(statePath, "utf8")).installs.find(record => record.name === "docx").complete, false, "添加订阅不触发无关的技能目录恢复");
+  await restartManager.remove({ id: extraRepo.id });
+  assert.equal(JSON.parse(await readFile(statePath, "utf8")).installs.find(record => record.name === "docx").complete, false, "移除订阅不触发无关恢复");
+  assert.equal((await restartManager.preview({ id: added.id, path: "skills/docx" })).localModified, false, "直接调用预览也能恢复安装记录，无需先打开列表");
   assert.equal((await restartManager.list()).repositories[0].skills.find(skill => skill.name === "docx").status, "installed", "重启后校验完整文件再恢复未确认安装");
   const recoveredStateFile = join(process.env.DSH_HOME, "skills-manager/repositories.json");
   const recoveredState = JSON.parse(await readFile(recoveredStateFile, "utf8"));
