@@ -25,6 +25,7 @@ import {
   logPath,
 } from "./core.js";
 import { registerPluginUpdater } from "./plugin-updater.js";
+import { createRepositoryManager } from "./repositories.js";
 
 const name = "skills-manager";
 const inject = ["webServer", "webRuntime", "skills", "tools", "sessions"];
@@ -322,6 +323,7 @@ function apply(ctx) {
     manifestUrl: new URL("../package.json", import.meta.url),
   }), "skills-manager: plugin updater");
   const log = makeLog();
+  const repositories = createRepositoryManager({ log });
   const trustedHosts = Array.isArray(ctx.webRuntime.trustedHosts) ? ctx.webRuntime.trustedHosts : [];
   const roots = userRoots();
   const rootByKey = Object.fromEntries(roots.map((r) => [r.key, r]));
@@ -384,6 +386,14 @@ function apply(ctx) {
       const sessionId = req.headers["x-dsh-skills-session"];
       const projectOptions = () => ({ projectCwds: activeSessionCwds(ctx, sessionId) });
       const requestRoot = async (key) => rootByKey[key] || (await projectRoots(projectOptions().projectCwds)).find((root) => root.key === key);
+      const stateWithSources = async () => {
+        const snapshot = await state(projectOptions());
+        try {
+          const sources = await repositories.sources();
+          for (const root of snapshot.roots) if (root.key === "dsh") for (const skill of root.skills || []) skill.installSource = sources[skill.name] || null;
+        } catch (error) { snapshot.warnings.push({ code: "error.repo.state", error: error.message }); }
+        return snapshot;
+      };
       try {
         const hostError = validateRequestOrigin(req, trustedHosts);
         if (hostError) {
@@ -391,11 +401,14 @@ function apply(ctx) {
           return;
         }
         if (req.method === "GET" && path === "/api/dsh-skills-manager/state") {
-          return run(res, () => state(projectOptions()));
+          return run(res, stateWithSources);
+        }
+        if ((req.method === "GET" || req.method === "HEAD") && path === "/api/dsh-skills-manager/repositories") {
+          return run(res, () => repositories.list(), undefined, req.method === "HEAD");
         }
         if (req.method === "HEAD") {
           // HEAD 复用 GET/405 的载荷计算 content-length，保持与实体一致的响应头语义。
-          if (path === "/api/dsh-skills-manager/state") return run(res, () => state(projectOptions()), undefined, true);
+          if (path === "/api/dsh-skills-manager/state") return run(res, stateWithSources, undefined, true);
           json(res, 405, { ok: false, code: "error.proto.method", error: `method not allowed: ${req.method}` }, true);
           return;
         }
@@ -409,11 +422,31 @@ function apply(ctx) {
           return;
         }
         const body = await readBody(req, path === "/api/dsh-skills-manager/upload" ? MAX_UPLOAD_BODY_BYTES : undefined);
+        if (path.startsWith("/api/dsh-skills-manager/repositories/") && (!body || typeof body !== "object" || Array.isArray(body))) {
+          json(res, 400, { ok: false, code: "error.repo.invalid", error: "仓库参数必须是对象" });
+          return;
+        }
         if (path === "/api/dsh-skills-manager/browse") {
           return run(res, () => browseDirectories(body.path));
         }
+        // 下载刷新只修改仓库目录缓存，使用仓库自己的串行队列，避免阻塞本地启停和导入。
+        if (path === "/api/dsh-skills-manager/repositories/refresh") return run(res, () => repositories.refresh(body));
         return enqueueMutation(() => {
           switch (path) {
+            case "/api/dsh-skills-manager/repositories/add":
+              return run(res, () => repositories.add(body));
+            case "/api/dsh-skills-manager/repositories/remove":
+              return run(res, () => repositories.remove(body));
+            case "/api/dsh-skills-manager/repositories/detail":
+              return run(res, () => repositories.detail(body));
+            case "/api/dsh-skills-manager/repositories/install":
+              return run(res, () => repositories.install(body), afterWrite);
+            case "/api/dsh-skills-manager/repositories/preview":
+              return run(res, () => repositories.preview(body));
+            case "/api/dsh-skills-manager/repositories/update":
+              return run(res, () => repositories.update(body), afterWrite);
+            case "/api/dsh-skills-manager/repositories/rollback":
+              return run(res, () => repositories.rollback(body), afterWrite);
             case "/api/dsh-skills-manager/enable":
               return run(res, async () => setSkillEnabled(await requestRoot(String(body.root || "dsh")), String(body.name || ""), true, log), afterWrite);
             case "/api/dsh-skills-manager/disable":

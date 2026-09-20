@@ -23,7 +23,7 @@ async function exists(path) {
 
 try {
   await build({
-    entryPoints: ["src/core.js", "src/readonly-discovery.js", "src/index.js", "src/plugin-updater.js"],
+    entryPoints: ["src/core.js", "src/readonly-discovery.js", "src/index.js", "src/plugin-updater.js", "src/repositories.js", "src/repository-updates.js"],
     outdir: stagingDirectory,
     outbase: "src",
     bundle: false,
