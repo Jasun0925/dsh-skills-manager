@@ -45,7 +45,7 @@ Skill repositories:
 
 ![Browse and install repository skills](assets/screenshots/skill-repositories.webp)
 
-*Screenshots show the pre-release 0.1.54 local build used to prepare 1.0.0. The final version adds refresh animation and progress feedback. 截图仅保留功能面板，已裁去背景中的真实文件名与项目目录，采用无损 WebP。*
+*Screenshots show the pre-release 0.1.54 local build used to prepare 1.0.0. The final version adds refresh animation and progress feedback. Screenshots show only the feature panels, with real filenames and project directories cropped out of the background, and use lossless WebP.*
 
 ## Installation
 
