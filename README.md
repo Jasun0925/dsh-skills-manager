@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/branding/dsh-banner.png" alt="DSH Skills Manager" width="100%">
+  <img src="assets/branding/dsh-banner-en.webp" alt="DSH Skills Manager" width="100%">
 </p>
 
 <div align="center">
 
 # DSH Skills Manager
 
-  **Load and safely manage skills from DSH and common local Agents**
+  **Manage local and project skills, install from GitHub, preview updates and restore backups**
 
   [简体中文](README.zh-CN.md) · [Changelog](CHANGELOG.md) · [Apache-2.0](LICENSE)
 
@@ -14,10 +14,13 @@
   [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
   [![npm downloads](https://img.shields.io/npm/dt/%40michengai%2Fdsh-skills-manager.svg?label=npm%20downloads)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
   [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-skills-manager)
+  [![DSH supported through 0.1.6-alpha.2](https://img.shields.io/badge/DSH-up%20to%200.1.6--alpha.2-2563eb.svg)](#installation)
   [![Node.js ^22.19.0 || >=24.0.0](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%20%3E%3D24-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
 </div>
 
 > DSH Skills Manager is a community-maintained DeepSeek Harness (DSH) plugin, not an official DeepSeek AI product.
+
+The next version is **1.0.0**, not yet published. Until publication, `@latest` installs the currently published npm version. See the [changelog](CHANGELOG.md) and [bilingual 1.0.0 release notes](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/04-1.0.0%E5%8F%91%E8%A1%8C%E8%AF%B4%E6%98%8E.md).
 
 ## Features
 
@@ -31,21 +34,19 @@ Bring skills from your computer and projects into DSH without switching between 
 - **Skill repositories**: discover public GitHub skills, install without overwriting local files, review updates and restore backups. [Repository guide](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/03-repository-guide.en.md).
 - **Recover deleted skills**: DSH skills go to Trash first, so accidental deletions can be restored.
 
+- **Source tracking and updates**: distinguish local and repository skills, preview file changes, protect local edits, and confirm backup, update or rollback.
+
 ## Screenshots
 
 Skill management:
 
-![Full skill management view](assets/screenshots/skills-manager-v2-preview.png)
+![Full skill management view](assets/screenshots/skills-manager-v2-preview.webp)
 
-Read a skill:
+Skill repositories:
 
-![Skill details](assets/screenshots/skill-detail.png)
+![Browse and install repository skills](assets/screenshots/skill-repositories.webp)
 
-Confirm before moving to Trash:
-
-![Move to Trash confirmation](assets/screenshots/delete-plugin.png)
-
-*These full screenshots show an earlier version. The current version adds Global, Project, Trash, and Repositories tabs.*
+*Screenshots show the pre-release 0.1.54 local build used to prepare 1.0.0. The final version adds refresh animation and progress feedback. Screenshots use lossless WebP at original resolution.*
 
 ## Installation
 
@@ -69,7 +70,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 Restart DSH, refresh the page, and open **Settings → Skills**. To update, select **Check for updates** or run the installation command again.
 
-- Plugin `0.1.54` is tested with DeepSeek Harness `0.1.0-rc.8`, `0.1.1-rc.2`, `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.6-alpha.1`, `0.1.6-alpha.2`.
+- Plugin `1.0.0` is tested with DeepSeek Harness `0.1.0-rc.8`, `0.1.1-rc.2`, `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.6-alpha.1`, `0.1.6-alpha.2`.
 
 ## Usage
 
@@ -79,11 +80,21 @@ Restart DSH, refresh the page, and open **Settings → Skills**. To update, sele
 | Read its contents | Select **View details** for the skill body and source information. |
 | Enable or disable | Toggle the skill switch. This affects DSH without editing source files. |
 | Add a skill | Select **Create skill** or **Import into global DSH**. |
+| Install from a repository | Open **Repositories → Add repository**, enter a public GitHub URL, scan and install individual skills. |
+| Update repository skills | Select **Refresh & check updates**, then **Review update** to inspect changes and confirm backup and update. |
+| Roll back an update | Select **Restore previous version** for a skill with a backup, preview and confirm. |
 | Recover a deletion | Open **Trash** and restore. For project skills, return to a session in the original project first. |
 
 - **Current project only**: Git repositories use the nearest Git root. Other folders use the current session working directory; no `git init` required.
 - **Independent copies**: disabling a project copy allows another enabled copy to take over, and the panel identifies the active source. Disable all copies to turn the skill off completely.
 - **File management**: only DSH skills can move to Trash. Other Agent skills can be viewed and toggled. Creation and import always save to global DSH.
+
+### Repository boundaries
+
+- The header **Check for updates** updates the plugin itself. Repository **Refresh & check updates** checks skill contents without installing or replacing them; it shows animation, counts and the current repository.
+- Repository installation targets global DSH only. Public GitHub repositories are supported; private credentials and automatic updates are not. Removing a subscription keeps installed skills.
+- Archives are limited to 32 MiB, including when filtering by subdirectory. Failed scans preserve the previous catalog; corrupt caches require refresh.
+- Local edits require explicit confirmation before replacement. Historical backups are not automatically cleaned and consume additional disk space.
 
 ## Supported Agent directories
 
@@ -118,7 +129,7 @@ For a desktop workbench, download [DSH Codex Desktop](https://github.com/Micheng
 | --- | --- |
 | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | Organize projects and conversations, search tasks, and navigate chat turns |
 | [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | Choose and summon specialists for your task |
-| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | Find, enable, create, and import local skills |
+| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | Manage local and project skills; install, update and roll back repository skills |
 | [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | Search, restore, or clean up archived conversations |
 | [IM Connect](https://github.com/MichengAI/dsh-im-connect) | Send tasks and receive replies through messaging platforms |
 | [Automation](https://github.com/MichengAI/dsh-automation) | Schedule tasks and review each run |

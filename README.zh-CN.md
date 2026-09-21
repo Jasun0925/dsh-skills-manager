@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/branding/dsh-banner.png" alt="DSH Skills Manager" width="100%">
+  <img src="assets/branding/dsh-banner-zh-CN.webp" alt="DSH Skills Manager" width="100%">
 </p>
 
 <div align="center">
 
 # DSH Skills Manager
 
-  **在 DeepSeek Harness 中统一加载并安全管理本机 Agent Skills**
+  **统一管理本机与项目技能，从 GitHub 安装、预览更新并备份回退**
 
   [English](README.md) · [更新日志](CHANGELOG.zh-CN.md) · [Apache-2.0](LICENSE)
 
@@ -14,10 +14,13 @@
   [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
   [![npm 下载量](https://img.shields.io/npm/dt/%40michengai%2Fdsh-skills-manager.svg?label=npm%20%E4%B8%8B%E8%BD%BD%E9%87%8F)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
   [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-skills-manager)
+  [![DSH 支持至 0.1.6-alpha.2](https://img.shields.io/badge/DSH-%E6%94%AF%E6%8C%81%E8%87%B3%200.1.6--alpha.2-2563eb.svg)](#安装)
   [![Node.js ^22.19.0 || >=24.0.0](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%20%3E%3D24-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
 </div>
 
 > DSH Skills Manager 是社区维护的 DeepSeek Harness（DSH）插件，并非 DeepSeek AI 官方产品。
+
+当前准备版本为 **1.0.0**，尚未发布；发布前 `@latest` 仍安装 npm 上的已发布版本。完整变更见[更新日志](CHANGELOG.zh-CN.md)，中英文发行说明见 [1.0.0 发行说明](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/04-1.0.0%E5%8F%91%E8%A1%8C%E8%AF%B4%E6%98%8E.md)。
 
 ## 功能概览
 
@@ -31,21 +34,19 @@
 - **技能仓库**：添加公开 GitHub 仓库，按来源折叠浏览、搜索、查看详情并逐项安装；同名不覆盖，刷新不自动更新本地。详见[仓库使用说明](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/02-%E6%8A%80%E8%83%BD%E4%BB%93%E5%BA%93%E7%AE%A1%E7%90%86.md)。
 
 
+- **来源追踪与更新**：区分本机和仓库安装，预览文件差异，保护本地修改，确认后备份更新并可恢复上一版。
+
 ## 界面预览
 
 技能管理：
 
-![技能管理完整界面](assets/screenshots/skills-manager-v2-preview.png)
+![技能管理完整界面](assets/screenshots/skills-manager-v2-preview.webp)
 
-查看技能内容：
+技能仓库：
 
-![技能详情](assets/screenshots/skill-detail.png)
+![技能仓库浏览与安装](assets/screenshots/skill-repositories.webp)
 
-移入回收站前确认：
-
-![移到回收站确认框](assets/screenshots/delete-plugin.png)
-
-*以上为历史版本的完整界面截图，当前版本增加了全局、项目、回收站和技能仓库页签。*
+*截图来自 1.0.0 发布前的 0.1.54 本地测试版，展示全局技能和技能仓库；最终版补充了刷新动画及进度提示。截图采用原尺寸无损 WebP。*
 
 ## 安装
 
@@ -69,7 +70,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 安装后重启 DSH 并刷新页面，打开「设置 → 技能」即可使用。更新时可点击「检查更新」，或重新执行安装命令。
 
-- `0.1.54` 已验证兼容 DeepSeek Harness `0.1.0-rc.8`、`0.1.1-rc.2`、`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.6-alpha.1`、`0.1.6-alpha.2`。
+- `1.0.0` 已验证兼容 DeepSeek Harness `0.1.0-rc.8`、`0.1.1-rc.2`、`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.6-alpha.1`、`0.1.6-alpha.2`。
 
 ## 使用说明
 
@@ -79,11 +80,21 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 | 查看内容 | 点击「查看详情」，阅读技能正文及来源信息。 |
 | 控制启停 | 切换技能开关；只影响 DSH，不改动源文件。 |
 | 添加技能 | 点击「创建技能」或「导入到全局 DSH」。 |
+| 从仓库安装 | 打开「技能仓库 → 添加仓库」，填写公开 GitHub 地址，扫描后逐项安装。 |
+| 更新仓库技能 | 点击「刷新并检查更新」，再「查看更新」预览文件差异，确认备份后更新。 |
+| 恢复更新前版本 | 对有备份的技能点击「恢复上一版」，预览并确认。 |
 | 找回误删 | 打开「回收站」恢复；项目技能需回到原项目会话后恢复。 |
 
 - **项目只看当前会话**：Git 仓库使用最近的 Git 根目录；普通文件夹使用当前会话的工作目录，无需 `git init`。
 - **同名技能独立启停**：停用项目副本后，其他已启用副本仍可接管，页面会提示实际来源。要完全关闭该技能，需停用全部副本。
 - **文件管理范围**：只有 DSH 来源的技能可以移入回收站；其他 Agent 的技能可查看和启停。创建与导入始终保存到全局 DSH。
+
+### 仓库使用边界
+
+- 标题区「检查更新」更新插件自身；仓库区「刷新并检查更新」检查技能内容，不自动安装或替换。刷新时显示当前仓库、数量和动画。
+- 仓库安装仅写入全局 DSH；仅支持公开 GitHub，不提供私有凭证或自动更新。移除订阅保留已安装技能。
+- 归档上限 32 MiB，指定子目录也需下载整库。扫描失败保留上次目录；缓存损坏时重新刷新。
+- 更新前检测本地修改，覆盖必须明确确认；历史备份不自动清理，磁盘用量会增加。
 
 ## 支持的 Agent 目录
 
@@ -118,7 +129,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 | --- | --- |
 | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | 整理项目与会话、搜索任务、跳转对话轮次 |
 | [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | 按任务选择并召唤专业角色 |
-| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | 统一查找、启停、创建和导入本机技能 |
+| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | 管理本机与项目技能，从仓库安装、更新和回退 |
 | [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | 搜索、恢复或清理已归档会话 |
 | [IM Connect](https://github.com/MichengAI/dsh-im-connect) | 从消息平台下任务、收回复 |
 | [Automation](https://github.com/MichengAI/dsh-automation) | 按计划执行任务，查看每次运行的结果 |
