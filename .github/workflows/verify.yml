@@ -58,15 +58,20 @@ jobs:
             core.info(run ? '执行完整检查' : '仅说明或展示图片变更，跳过完整测试');
 
   verify:
+    name: 完整验证（Node.js ${{ matrix.node }}）
     needs: changes
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.19.0", "24"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node }}
           package-manager-cache: false
       - run: corepack enable
       - run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --config.auto-install-peers=true --config.strictDepBuilds=false

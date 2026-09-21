@@ -2,6 +2,21 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## Unreleased
+
+These changes follow the published 1.0.0 release and are not included in its npm package. The next release must use a new version number.
+
+### Development and packaging
+
+- Migrate ten source modules to strict TypeScript, retaining the existing plugin architecture and JavaScript runtime entry points. Add domain, host and client contracts, plus positive and negative type tests; include type checking in the main test command.
+- Stop tracking `lib` in Git. Run type checks and build automatically before packing, and verify that a clean directory without `lib` produces a package with all runtime files and a loadable server entry point.
+- Cover the exact minimum Node.js version 22.19.0 alongside Node.js 24 in CI. Code changes continue to trigger the supported-host compatibility matrix.
+- Document supported installation via the npm registry or locally built `.tgz` packages; direct Git/GitHub dependency installation is not supported. Align the English and Chinese development instructions.
+
+### Fixes
+
+- Restore modal focus after an asynchronous form submission disables the focused button, so Escape after an error closes only the plugin dialog instead of the entire host settings page.
+
 ## 1.0.0 - 2026-09-21
 
 ### 1.0 release scope
