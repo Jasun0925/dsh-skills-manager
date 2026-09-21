@@ -1,6 +1,6 @@
 // 使用最小 DOM 验证保留节点切换语言、打开弹窗及更新中的状态，不访问真实更新服务。
 import assert from "node:assert/strict";
-import { observePluginUpdate } from "../src/plugin-update-ui.js";
+import { observePluginUpdate } from "../src/plugin-update-ui.ts";
 
 class Element {
   constructor() { this.children = []; this.dataset = {}; this.attributes = {}; this.events = {}; this.classList = { add() {} }; this.fields = new Map(); }

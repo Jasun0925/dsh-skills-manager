@@ -1,3 +1,5 @@
+import type { CodedError } from "./types.js";
+import type { DiscoveredEntry } from "./types.js";
 // 只读技能目录发现：允许目录链接，按发现路径过滤隐藏目录，用真实祖先路径终止循环。
 import { promises as fs } from "node:fs";
 import { resolve, join, relative, sep } from "node:path";
@@ -5,11 +7,11 @@ import { resolve, join, relative, sep } from "node:path";
 const MAX_DEPTH = 6;
 const MAX_DIRECTORIES = 2000;
 const MAX_ENTRIES = 20000;
-const identity = (path) =>
+const identity = (path: string) =>
   process.platform === "win32" ? path.toLowerCase() : path;
 
 /** 只读条目使用根下相对路径；点号表示根本身的 SKILL.md，不接受路径穿越。 */
-export function validDiscoveryName(name) {
+export function validDiscoveryName(name: unknown): name is string {
   return (
     typeof name === "string" &&
     (name === "." ||
@@ -29,10 +31,10 @@ export function validDiscoveryName(name) {
 }
 
 /** 只返回文件定位信息，不读取正文，供列表、详情及策略复用同一发现与去重规则。 */
-export async function discoverReadonlyEntries(root) {
+export async function discoverReadonlyEntries(root: string) {
   const rootPath = resolve(root);
-  const queue = [{ path: rootPath, depth: 0, ancestors: new Set() }];
-  const byName = new Map();
+  const queue = [{ path: rootPath, depth: 0, ancestors: new Set<string>() }];
+  const byName = new Map<string, DiscoveredEntry & {name: string}>();
   let directories = 0;
   let entries = 0;
   let exists = false;
@@ -56,7 +58,7 @@ export async function discoverReadonlyEntries(root) {
         let docStat;
         try {
           docStat = await fs.lstat(docPath);
-        } catch (error) {
+        } catch (caught) { const error = caught as CodedError;
           if (error.code !== "ENOENT") throw error;
         }
         if (docStat?.isFile() && !docStat.isSymbolicLink()) {

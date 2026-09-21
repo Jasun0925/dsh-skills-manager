@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { handlePluginUpdateEscape, manualPluginUpdateCommand } from '../src/plugin-update-ui.js'
-import { isDshCliEntry, isNewerVersion, isTrustedUpdateRequest, PLUGIN_UPDATE_HEADER } from '../src/plugin-updater.js'
+import { handlePluginUpdateEscape, manualPluginUpdateCommand } from '../src/plugin-update-ui.ts'
+import { isDshCliEntry, isNewerVersion, isTrustedUpdateRequest, PLUGIN_UPDATE_HEADER } from '../src/plugin-updater.ts'
 
 test('技能管理器独立更新只接受同源专用请求', () => {
   assert.equal(isNewerVersion('0.1.40', '0.1.41'), true)
@@ -31,9 +31,9 @@ test('技能更新弹窗消费 ESC，避免继续关闭底层设置页', () => {
 })
 
 test('技能客户端与 Host 绑定自身更新入口', async () => {
-  const client = await readFile(new URL('../src/client.js', import.meta.url), 'utf8')
-  const updateUi = await readFile(new URL('../src/plugin-update-ui.js', import.meta.url), 'utf8')
-  const host = await readFile(new URL('../src/index.js', import.meta.url), 'utf8')
+  const client = await readFile(new URL('../src/client.ts', import.meta.url), 'utf8')
+  const updateUi = await readFile(new URL('../src/plugin-update-ui.ts', import.meta.url), 'utf8')
+  const host = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8')
   assert.match(client, /packageName: "@michengai\/dsh-skills-manager"/)
   assert.match(client, /titleRowSelector: "\.dssm-title-row"/)
   assert.match(client, /createIcon: createPluginUpdateIcon/)
@@ -45,11 +45,11 @@ test('技能客户端与 Host 绑定自身更新入口', async () => {
   assert.match(updateUi, /<header class="mpi-head"><h2><\/h2><button type="button" class="mpi-dialog-close" data-action="close"><\/button><\/header>/)
   assert.match(updateUi, /<footer class="mpi-actions"><div class="mpi-actions-group">/)
   assert.match(updateUi, /background:var\(--dsw-alias-bg-layer-2/)
-  assert.match(updateUi, /box-shadow:var\(--dsw-shadow-lv3/)
+  assert.match(updateUi, /box-shadow:var\(--dsw-elevation-prominent/)
   assert.match(updateUi, /border-radius:14px/)
   assert.match(updateUi, /if \(version\.textContent !== versionLabel\)/)
   assert.match(updateUi, /else if \(payload\.latestCheckFailed\)/)
   assert.match(host, /endpoint: "\/api\/michengai\/dsh-skills-manager\/update"/)
-  assert.match(await readFile(new URL('../src/plugin-updater.js', import.meta.url), 'utf8'), /const notifyParent = target\.desktopPnpm === void 0 && typeof process\.send === "function"/)
-  assert.match(await readFile(new URL('../src/plugin-updater.js', import.meta.url), 'utf8'), /isDshCliEntry/)
+  assert.match(await readFile(new URL('../src/plugin-updater.ts', import.meta.url), 'utf8'), /const notifyParent = target\.desktopPnpm === void 0 && typeof process\.send === "function"/)
+  assert.match(await readFile(new URL('../src/plugin-updater.ts', import.meta.url), 'utf8'), /isDshCliEntry/)
 })

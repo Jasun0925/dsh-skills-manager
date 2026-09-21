@@ -20,7 +20,7 @@ async function ok(condition, message) {
   }
 }
 
-for (const path of ["../src/core.js", "../src/readonly-discovery.js", "../src/index.js", "../src/client.js"]) {
+for (const path of ["../src/core.ts", "../src/readonly-discovery.ts", "../src/index.ts", "../src/client.ts"]) {
   try {
     await access(new URL(path, import.meta.url), constants.R_OK);
     await ok(true, `${path} exists as maintained source`);
@@ -53,7 +53,19 @@ await ok(manifest.scripts?.test?.includes("build-test.mjs"), "test command enfor
 await ok(manifest.engines?.node === "^22.19.0 || >=24.0.0", "package uses the shared Node LTS baseline");
 await ok(manifest.packageManager === "pnpm@11.22.0", "package pins the shared pnpm version");
 
+await ok(manifest.scripts?.typecheck === "tsc --noEmit", "类型检查作为独立门禁");
+await ok(manifest.scripts?.test?.includes("typecheck"), "完整测试先执行类型检查");
+const typeConfig = JSON.parse(await readFile(new URL("../tsconfig.json", import.meta.url), "utf8").then(text => text.replace(/^\uFEFF/, "")));
+await ok(typeConfig.compilerOptions?.strict === true && typeConfig.compilerOptions?.noEmit === true, "严格类型检查不能由转译构建替代");
+await ok(typeConfig.compilerOptions?.erasableSyntaxOnly === true, "源码使用 Node 原生可擦除的 TypeScript 语法");
+await ok(!(await readdir(new URL("../src/", import.meta.url))).some(name => name.endsWith(".js")), "维护源码不再混入未检查的 JavaScript 模块");
+
 const projectRoot = new URL("../", import.meta.url);
+const ignoreRules = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
+await ok(/^\/lib\/$/m.test(ignoreRules), "构建产物不再进入 Git 提交");
+await ok(manifest.scripts?.prepack === "npm run typecheck && npm run build", "打包前自动检查类型并生成产物");
+await ok(!manifest.scripts?.verify?.includes("check-generated.mjs"), "发布验证不再要求提交生成产物");
+await ok(manifest.scripts?.verify?.includes("pack-test.mjs"), "发布验证覆盖无产物的干净目录打包");
 const generatedCore = new URL("../lib/core.js", import.meta.url);
 const beforeFailureHash = createHash("sha256").update(await readFile(generatedCore)).digest("hex");
 try {

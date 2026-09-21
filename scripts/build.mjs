@@ -23,7 +23,7 @@ async function exists(path) {
 
 try {
   await build({
-    entryPoints: ["src/core.js", "src/readonly-discovery.js", "src/index.js", "src/plugin-updater.js", "src/repositories.js", "src/repository-updates.js"],
+    entryPoints: ["src/core.ts", "src/readonly-discovery.ts", "src/index.ts", "src/plugin-updater.ts", "src/repositories.ts", "src/repository-updates.ts"],
     outdir: stagingDirectory,
     outbase: "src",
     bundle: false,
@@ -33,7 +33,7 @@ try {
   });
 
   await build({
-    entryPoints: ["src/client.js"],
+    entryPoints: ["src/client.ts"],
     outfile: join(stagingDirectory, "client.js"),
     bundle: true,
     format: "iife",

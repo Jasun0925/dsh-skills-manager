@@ -1,3 +1,6 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { HostContext, UpdateOptions, UpdateTarget } from "./host-types.js";
+import type { CodedError } from "./types.js";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -6,15 +9,15 @@ import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const PLUGIN_UPDATE_HEADER = "x-michengai-plugin-update";
 const PLUGIN_UPDATE_IPC = "apply-plugin-updates";
-function header(request, name) {
+function header(request: IncomingMessage, name: string) {
   const value = request.headers?.[name];
   return Array.isArray(value) ? value[0] : value;
 }
-function isLoopbackAddress(value) {
+function isLoopbackAddress(value?: string) {
   const address = value?.toLowerCase().replace(/^\[|\]$/g, "");
   return address === "localhost" || address === "localhost." || address === "::1" || address?.startsWith("127.") === true || address?.startsWith("::ffff:127.") === true;
 }
-function isTrustedUpdateRequest(request) {
+function isTrustedUpdateRequest(request: IncomingMessage) {
   if (header(request, PLUGIN_UPDATE_HEADER) !== "1") return false;
   if (!isLoopbackAddress(request.socket?.remoteAddress)) return false;
   const site = header(request, "sec-fetch-site");
@@ -29,17 +32,17 @@ function isTrustedUpdateRequest(request) {
     return false;
   }
 }
-function validProfileName(value) {
+function validProfileName(value: unknown): value is string {
   return typeof value === "string" && value !== "" && value !== "." && value !== ".." && !value.includes("/") && !value.includes("\\") && !/[\0-\x1f\x7f]/.test(value);
 }
-function profileNameFromArgv(argv) {
+function profileNameFromArgv(argv: string[]) {
   for (let index = 2; index < argv.length; index += 1) {
     if (argv[index] === "--profile") return argv[index + 1];
     if (argv[index]?.startsWith("--profile=")) return argv[index].slice("--profile=".length);
   }
   return argv[2] === "web" ? "web" : void 0;
 }
-function isDshCliEntry(entry, manifest, packageRoot) {
+function isDshCliEntry(entry: string, manifest: {name?: string; bin?: string | {dsh?: string}}, packageRoot: string) {
   if (typeof manifest !== "object" || manifest === null) return false;
   if (manifest.name !== "@deepseek-ai/dsh") return false;
   const bin = typeof manifest.bin === "string" ? manifest.bin : typeof manifest.bin === "object" && manifest.bin !== null ? manifest.bin.dsh : void 0;
@@ -63,7 +66,7 @@ function cliEntry() {
     directory = parent;
   }
 }
-function runtime(ctx) {
+function runtime(ctx: HostContext): UpdateTarget {
   const profiles = ctx.get?.("desktopProfiles");
   const desktopPnpm = ctx.get?.("desktopPnpm");
   if (profiles?.current !== void 0) {
@@ -79,12 +82,12 @@ function runtime(ctx) {
   const entry = cliEntry();
   return { profileName, profileDir, ...entry === void 0 ? {} : { cliEntry: entry } };
 }
-function parseSemver(value) {
+function parseSemver(value: string) {
   const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value);
   if (match === null) return void 0;
   return { core: [Number(match[1]), Number(match[2]), Number(match[3])], prerelease: match[4]?.split(".") ?? [] };
 }
-function isNewerVersion(currentValue, candidateValue) {
+function isNewerVersion(currentValue: string, candidateValue: string) {
   const current = parseSemver(currentValue);
   const candidate = parseSemver(candidateValue);
   if (current === void 0 || candidate === void 0) return false;
@@ -93,7 +96,7 @@ function isNewerVersion(currentValue, candidateValue) {
   }
   return comparePrerelease(candidate.prerelease, current.prerelease) > 0;
 }
-function comparePrerelease(left, right) {
+function comparePrerelease(left: string[], right: string[]) {
   if (left.length === 0 || right.length === 0) return left.length === right.length ? 0 : left.length === 0 ? 1 : -1;
   const length = Math.max(left.length, right.length);
   for (let index = 0; index < length; index += 1) {
@@ -114,13 +117,13 @@ function comparePrerelease(left, right) {
   }
   return 0;
 }
-let latestCache;
-async function latestVersion(packageName) {
+let latestCache: {packageName: string; expiresAt: number; version: string} | undefined;
+async function latestVersion(packageName: string) {
   if (latestCache?.packageName === packageName && Date.now() < latestCache.expiresAt) return latestCache.version;
   try {
     const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, { signal: AbortSignal.timeout(8e3) });
     if (!response.ok) return void 0;
-    const value = await response.json();
+    const value: {version?: unknown} = await response.json();
     if (typeof value.version !== "string" || value.version === "") return void 0;
     latestCache = { packageName, version: value.version, expiresAt: Date.now() + 5 * 6e4 };
     return value.version;
@@ -128,12 +131,12 @@ async function latestVersion(packageName) {
     return void 0;
   }
 }
-async function currentVersion(manifestUrl) {
-  const value = JSON.parse(await readFile(manifestUrl, "utf8"));
+async function currentVersion(manifestUrl: URL) {
+  const value: {version?: unknown} = JSON.parse(await readFile(manifestUrl, "utf8"));
   if (typeof value.version !== "string" || value.version === "") throw new Error("\u65E0\u6CD5\u8BFB\u53D6\u5F53\u524D\u63D2\u4EF6\u7248\u672C\u3002");
   return value.version;
 }
-async function status(options, target) {
+async function status(options: UpdateOptions, target: UpdateTarget) {
   const current = await currentVersion(options.manifestUrl);
   const latest = await latestVersion(options.packageName);
   return {
@@ -146,10 +149,10 @@ async function status(options, target) {
     canAutoUpdate: target.desktopPnpm !== void 0 || target.cliEntry !== void 0
   };
 }
-async function runCliInstall(target, packageSpec) {
+async function runCliInstall(target: UpdateTarget, packageSpec: string) {
   if (target.cliEntry === void 0) throw new Error("\u5F53\u524D\u73AF\u5883\u4E0D\u652F\u6301\u81EA\u52A8\u66F4\u65B0\uFF0C\u8BF7\u4F7F\u7528\u624B\u5DE5\u66F4\u65B0\u547D\u4EE4\u3002");
-  await new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [target.cliEntry, "plugin", "--profile", target.profileName, "add", "--config.minimumReleaseAge=0", packageSpec, "--registry=https://registry.npmjs.org/"], {
+  await new Promise<void>((resolvePromise, reject) => {
+    const child = spawn(process.execPath, [target.cliEntry!, "plugin", "--profile", target.profileName, "add", "--config.minimumReleaseAge=0", packageSpec, "--registry=https://registry.npmjs.org/"], {
       cwd: target.profileDir,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -177,21 +180,21 @@ async function runCliInstall(target, packageSpec) {
     });
   });
 }
-async function install(target, packageSpec) {
+async function install(target: UpdateTarget, packageSpec: string) {
   if (target.desktopPnpm === void 0) return runCliInstall(target, packageSpec);
   const handle = target.desktopPnpm.runPlugin(["add", "--config.minimumReleaseAge=0", packageSpec, "--registry=https://registry.npmjs.org/"], target.profileDir);
   const result = await handle.done;
   if (result.exitCode !== 0) throw new Error(`\u66F4\u65B0\u8FDB\u7A0B\u9000\u51FA\u7801 ${String(result.exitCode)}\u3002`);
 }
-function json(response, statusCode, value) {
+function json(response: ServerResponse, statusCode: number, value: unknown) {
   response.writeHead(statusCode, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   response.end(JSON.stringify(value));
 }
-function publicError(error) {
+function publicError(error: unknown) {
   const message = error instanceof Error ? error.message : "\u66F4\u65B0\u6682\u4E0D\u53EF\u7528\u3002";
   return /[A-Za-z]:[\\/]|\/(?:home|root|Users|var|tmp)\//.test(message) ? "\u66F4\u65B0\u5931\u8D25\uFF0C\u8BF7\u67E5\u770B\u670D\u52A1\u7AEF\u65E5\u5FD7\u3002" : message;
 }
-function registerPluginUpdater(ctx, options) {
+function registerPluginUpdater(ctx: HostContext, options: UpdateOptions) {
   const host = ctx;
   let installing = false;
   return host.webServer.register({
@@ -240,7 +243,7 @@ function registerPluginUpdater(ctx, options) {
         if (notifyParent) setTimeout(() => {
           process.send?.(PLUGIN_UPDATE_IPC);
         }, 150).unref?.();
-      } catch (error) {
+      } catch (caught) { const error = caught as CodedError;
         ctx.logger.warn(`plugin updater failed: ${String(error)}`);
         json(response, 503, { error: publicError(error) });
       }

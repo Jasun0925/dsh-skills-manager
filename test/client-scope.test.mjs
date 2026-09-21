@@ -11,6 +11,8 @@ const react = {
   useState(initial) { const index = cursor++, store = state; if (!(index in store)) store[index] = initial; return [store[index], (next) => { store[index] = typeof next === "function" ? next(store[index]) : next; }]; },
   useRef(value) { const index = cursor++; return state[index] || (state[index] = { current: value }); },
   useEffect(effect) { const index = cursor++; if (!(index in state)) { state[index] = true; effects.push(effect); } },
+  // 此测试不挂载 DOM；焦点恢复另由焦点单测与真实浏览器验证。
+  useLayoutEffect() { cursor++; },
 };
 const skill = (name) => ({ name, description: "LONG_DESCRIPTION_" + name, enabled: true, loadable: true });
 const data = {

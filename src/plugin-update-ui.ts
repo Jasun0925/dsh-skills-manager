@@ -1,3 +1,6 @@
+interface UpdatePayload { packageName: string; currentVersion: string; updateAvailable: boolean; profileName: string; canAutoUpdate: boolean; latestCheckFailed: boolean; latestVersion?: string; autoReload?: boolean }
+interface UpdateUIOptions {endpoint: string; packageName: string; titleRowSelector: string; linksSelector: string; zhName: string; enName: string; createIcon: (name: 'refresh' | 'download' | 'copy' | 'close') => HTMLElement}
+import type { CodedError } from "./types.js";
 const UPDATE_HEADER = "x-michengai-plugin-update";
 const STYLE_ID = "michengai-plugin-update-ui";
 const CSS = `
@@ -65,12 +68,12 @@ function ensureStyle() {
   style.textContent = CSS;
   (document.head ?? document.documentElement).append(style);
 }
-function validPayload(value) {
+function validPayload(value: unknown): value is UpdatePayload {
   if (value === null || typeof value !== "object") return false;
-  const item = value;
+  const item = value as Record<string, unknown>;
   return typeof item.packageName === "string" && typeof item.currentVersion === "string" && typeof item.updateAvailable === "boolean" && typeof item.profileName === "string" && typeof item.canAutoUpdate === "boolean" && typeof item.latestCheckFailed === "boolean" && (item.latestVersion === void 0 || typeof item.latestVersion === "string");
 }
-async function requestStatus(endpoint, method, signal) {
+async function requestStatus(endpoint: string, method: string, signal?: AbortSignal) {
   const signalOption = signal === void 0 ? {} : { signal };
   const response = await fetch(endpoint, method === "GET" ? { cache: "no-store", ...signalOption } : {
     method: "POST",
@@ -78,15 +81,15 @@ async function requestStatus(endpoint, method, signal) {
     body: "{}",
     ...signalOption
   });
-  const value = await response.json();
-  if (!response.ok || !validPayload(value)) throw new Error(typeof value.error === "string" ? value.error : strings().failed);
+  const value: unknown = await response.json();
+  if (!response.ok || !validPayload(value)) throw new Error(value && typeof value === "object" && "error" in value && typeof value.error === "string" ? value.error : strings().failed);
   return value;
 }
-function manualPluginUpdateCommand(profileName, packageName, version) {
+function manualPluginUpdateCommand(profileName: string, packageName: string, version: string) {
   const profile = profileName.trim() === "" ? "" : ` --profile ${profileName.trim()}`;
   return `dsh plugin${profile} add ${packageName}@${version} --registry=https://registry.npmjs.org/`;
 }
-function handlePluginUpdateEscape(event, close) {
+function handlePluginUpdateEscape(event: KeyboardEvent, close: () => void) {
   if (event.key !== "Escape") return false;
   event.preventDefault();
   event.stopPropagation();
@@ -94,16 +97,16 @@ function handlePluginUpdateEscape(event, close) {
   close();
   return true;
 }
-function observePluginUpdate(options) {
+function observePluginUpdate(options: UpdateUIOptions) {
   if (typeof document === "undefined" || document.body === null) return () => {
   };
   ensureStyle();
   const controller = new AbortController();
-  let payload;
-  let overlay;
-  let frame;
-  let refreshDialog;
-  const setButtonContent = (button, label, iconName) => {
+  let payload: UpdatePayload | undefined;
+  let overlay: HTMLDivElement | undefined;
+  let frame: number | undefined;
+  let refreshDialog: (() => void) | undefined;
+  const setButtonContent = (button: HTMLElement, label: string, iconName: Parameters<UpdateUIOptions["createIcon"]>[0]) => {
     const icon = options.createIcon(iconName);
     icon.classList.add("mpi-icon");
     icon.setAttribute("aria-hidden", "true");
@@ -112,7 +115,7 @@ function observePluginUpdate(options) {
     text.textContent = label;
     button.replaceChildren(icon, text);
   };
-  const setButtonLabel = (button, label) => {
+  const setButtonLabel = (button: Element, label: string) => {
     const text = button.querySelector("[data-mpi-label]");
     if (text === null) button.textContent = label;
     else if (text.textContent !== label) text.textContent = label;
@@ -122,7 +125,7 @@ function observePluginUpdate(options) {
     if (row === null) return;
     const heading = row.querySelector("h1,h2");
     if (heading !== null && payload !== void 0) {
-      let version = heading.querySelector(`.mpi-version[data-package="${options.packageName}"]`);
+      let version = heading.querySelector<HTMLElement>(`.mpi-version[data-package="${options.packageName}"]`);
       if (version === null) {
         version = document.createElement("span");
         version.className = "mpi-version";
@@ -167,13 +170,13 @@ function observePluginUpdate(options) {
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
     dialog.innerHTML = `<header class="mpi-head"><h2></h2><button type="button" class="mpi-dialog-close" data-action="close"></button></header><p class="mpi-intro"></p><dl class="mpi-meta"><dt></dt><dd data-role="current"></dd><dt></dt><dd data-role="latest"></dd><dt></dt><dd data-role="profile"></dd></dl><div class="mpi-status" role="status"></div><div class="mpi-progress" hidden></div><section class="mpi-manual"><h3></h3><p></p><div class="mpi-command"><code></code><button type="button" class="mpi-action" data-action="copy"></button></div></section><footer class="mpi-actions"><div class="mpi-actions-group"><button type="button" class="mpi-action" data-action="check"></button><button type="button" class="mpi-action mpi-primary" data-action="update"></button></div></footer>`;
-    const status = dialog.querySelector(".mpi-status");
-    const progress = dialog.querySelector(".mpi-progress");
-    const command = dialog.querySelector(".mpi-command code");
-    const close = dialog.querySelector("[data-action=close]");
-    const check = dialog.querySelector("[data-action=check]");
-    const update = dialog.querySelector("[data-action=update]");
-    const copy = dialog.querySelector("[data-action=copy]");
+    const status = dialog.querySelector<HTMLElement>(".mpi-status")!;
+    const progress = dialog.querySelector<HTMLElement>(".mpi-progress")!;
+    const command = dialog.querySelector<HTMLElement>(".mpi-command code")!;
+    const close = dialog.querySelector<HTMLButtonElement>("[data-action=close]")!;
+    const check = dialog.querySelector<HTMLButtonElement>("[data-action=check]")!;
+    const update = dialog.querySelector<HTMLButtonElement>("[data-action=update]")!;
+    const copy = dialog.querySelector<HTMLButtonElement>("[data-action=copy]")!;
     setButtonContent(close, text.close, "close");
     close.querySelector("[data-mpi-label]")?.remove();
     close.setAttribute("aria-label", text.close);
@@ -183,13 +186,13 @@ function observePluginUpdate(options) {
     setButtonContent(copy, text.copy, "copy");
     let busy = false;
     let updating = false;
-    let currentMessage;
-    const setMessage = (message, kind = "") => {
+    let currentMessage: string | (() => string) | undefined;
+    const setMessage = (message: string | (() => string), kind = "") => {
       currentMessage = message;
       status.textContent = typeof message === "function" ? message() : message;
       status.dataset.kind = kind;
     };
-    const setBusy = (value) => {
+    const setBusy = (value: boolean) => {
       busy = value;
       check.disabled = value;
       copy.disabled = value;
@@ -197,14 +200,14 @@ function observePluginUpdate(options) {
       progress.hidden = !value;
     };
     const render = () => {
-      dialog.querySelector("[data-role=current]").textContent = payload === void 0 ? text.unknown : `v${payload.currentVersion}`;
-      dialog.querySelector("[data-role=latest]").textContent = payload?.latestVersion === void 0 ? text.unknown : `v${payload.latestVersion}`;
-      dialog.querySelector("[data-role=profile]").textContent = payload?.profileName ?? text.unknown;
+      dialog.querySelector<HTMLElement>("[data-role=current]")!.textContent = payload === void 0 ? text.unknown : `v${payload.currentVersion}`;
+      dialog.querySelector<HTMLElement>("[data-role=latest]")!.textContent = payload?.latestVersion === void 0 ? text.unknown : `v${payload.latestVersion}`;
+      dialog.querySelector<HTMLElement>("[data-role=profile]")!.textContent = payload?.profileName ?? text.unknown;
       command.textContent = manualPluginUpdateCommand(payload?.profileName ?? "", options.packageName, payload?.latestVersion ?? "latest");
       update.disabled = busy || payload?.canAutoUpdate !== true || payload.updateAvailable !== true;
       if (payload === void 0) setMessage(() => text.checking);
       else if (payload.latestCheckFailed) setMessage(() => text.failed, "error");
-      else if (payload.updateAvailable) setMessage(() => `${text.found}: v${payload.latestVersion ?? text.unknown}`);
+      else if (payload.updateAvailable) setMessage(() => `${text.found}: v${payload?.latestVersion ?? text.unknown}`);
       else setMessage(() => text.latest, "success");
       if (payload !== void 0 && !payload.canAutoUpdate && payload.updateAvailable) setMessage(() => text.unavailable);
     };
@@ -216,7 +219,7 @@ function observePluginUpdate(options) {
         await load();
         setBusy(false);
         render();
-      } catch (error) {
+      } catch (caught) { const error = caught as CodedError;
         setBusy(false);
         setMessage(error instanceof Error ? error.message : () => text.failed, "error");
       }
@@ -231,8 +234,8 @@ function observePluginUpdate(options) {
         payload = await requestStatus(options.endpoint, "POST", controller.signal);
         applyControls();
         render();
-        setMessage(() => payload.autoReload === true ? text.restarting : text.restart, "success");
-      } catch (error) {
+        setMessage(() => payload?.autoReload === true ? text.restarting : text.restart, "success");
+      } catch (caught) { const error = caught as CodedError;
         setMessage(error instanceof Error ? error.message : () => text.failed, "error");
       } finally {
         updating = false;
@@ -263,22 +266,22 @@ function observePluginUpdate(options) {
       text = next;
       dialog.dataset.localeReady = "true";
       const name = text === EN ? options.enName : options.zhName;
-      dialog.querySelector("h2").textContent = `${name} ${text.update}`;
-      dialog.querySelector(".mpi-intro").textContent = text.intro;
+      dialog.querySelector<HTMLElement>("h2")!.textContent = `${name} ${text.update}`;
+      dialog.querySelector<HTMLElement>(".mpi-intro")!.textContent = text.intro;
       const terms = dialog.querySelectorAll("dt");
       terms[0].textContent = text.current;
       terms[1].textContent = text.latestLabel;
       terms[2].textContent = text.profile;
-      dialog.querySelector(".mpi-manual h3").textContent = text.manual;
-      dialog.querySelector(".mpi-manual p").textContent = text.manualHint;
+      dialog.querySelector<HTMLElement>(".mpi-manual h3")!.textContent = text.manual;
+      dialog.querySelector<HTMLElement>(".mpi-manual p")!.textContent = text.manualHint;
       close.setAttribute("aria-label", text.close);
       close.title = text.close;
       setButtonLabel(check, text.recheck);
       setButtonLabel(update, updating ? text.updating : text.auto);
       setButtonLabel(copy, text.copy);
-      dialog.querySelector("[data-role=current]").textContent = payload === void 0 ? text.unknown : `v${payload.currentVersion}`;
-      dialog.querySelector("[data-role=latest]").textContent = payload?.latestVersion === void 0 ? text.unknown : `v${payload.latestVersion}`;
-      dialog.querySelector("[data-role=profile]").textContent = payload?.profileName ?? text.unknown;
+      dialog.querySelector<HTMLElement>("[data-role=current]")!.textContent = payload === void 0 ? text.unknown : `v${payload.currentVersion}`;
+      dialog.querySelector<HTMLElement>("[data-role=latest]")!.textContent = payload?.latestVersion === void 0 ? text.unknown : `v${payload.latestVersion}`;
+      dialog.querySelector<HTMLElement>("[data-role=profile]")!.textContent = payload?.profileName ?? text.unknown;
       if (currentMessage !== undefined) status.textContent = typeof currentMessage === "function" ? currentMessage() : currentMessage;
     };
     refreshDialog();

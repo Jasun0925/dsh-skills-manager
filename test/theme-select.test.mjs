@@ -1,7 +1,7 @@
 // 验证下拉委托官方菜单及键盘打开、选择和关闭的受控行为。
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createSourceSelect } from "../src/source-select.js";
+import { createSourceSelect } from "../src/source-select.ts";
 let open = false, value = "a";
 const react = { createElement: (type, props, ...children) => ({ type, props, children }), useState: () => [open, next => { open = next; }], useRef: () => ({ current: null }), useEffect() {} };
 const Menu = Symbol("官方菜单");
@@ -19,14 +19,14 @@ const actions = Select({ label: "更多", action: true, options: [{ value: "tras
 assert.equal(actions.props.items[0].danger, true, "回收操作保留危险操作标记");
 assert.equal(actions.props.align, "end", "操作菜单靠右对齐");
 assert.equal(actions.props.selectedId, undefined, "操作菜单不显示选中状态");
-const source = await readFile(new URL("../src/client.js", import.meta.url), "utf8");
+const source = await readFile(new URL("../src/client.ts", import.meta.url), "utf8");
 assert.ok(source.includes('h(primitives.Input, { className: "dssm-input dssm-search"'), "技能搜索必须使用官方输入框且不覆盖官方外观");
 assert.ok(!source.includes('h("input", { className: "dssm-control'), "可见文本输入不能继续使用自定义控件");
 assert.ok(source.includes('className: "dssm-row-state"'), "状态与开关必须在同一组");
 assert.ok(!source.includes('grid-row:1 / span 3'), "操作区不能跨三行居中");
 assert.ok(source.includes("var(--dsw-alias-bg-mask-1,rgba("), "遮罩必须为缺少变量的宿主保留兜底");
 assert.ok(!source.includes('outline:2px solid var(--dsw-alias-state-success-primary)'), "焦点不能使用成功状态色");
-const updater = await readFile(new URL("../src/plugin-update-ui.js", import.meta.url), "utf8");
+const updater = await readFile(new URL("../src/plugin-update-ui.ts", import.meta.url), "utf8");
 assert.ok(updater.includes("var(--dsw-elevation-prominent,0 8px"), "阴影必须有兼容兜底");
 console.log("官方菜单交互与颜色变量检查通过");
 

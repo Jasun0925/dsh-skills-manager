@@ -1,3 +1,15 @@
+type RepositoryAction = "add" | "remove" | "refresh" | "detail" | "install" | "preview" | "update" | "rollback";
+import type * as React from 'react';
+import type * as Primitives from '@deepseek-ai/dsh-client-ui-primitives';
+import type { ApiCall, ApiRoutes, Translate, ModalProps, SourceSelectProps } from './client-types.js';
+import type { InstallSource, Diagnostic } from './types.js';
+type RepoView = ApiRoutes['/repositories']['repositories'][number];
+type RepoSkill = RepoView['skills'][number];
+type Feedback = {error?: boolean; payload?: unknown; key?: string; name?: string; text?: string};
+type Installation = Feedback & {id: string; path: string; pending?: boolean};
+type RepoModal = {type: 'add' | 'manage'} | {type: 'remove'; repo: RepoView} | {type: 'detail'; repo: RepoView; detail?: ApiRoutes['/repositories/detail']; loading?: boolean; failed?: boolean} | {type: 'review' | 'rollback'; repo: RepoView; skill: RepoSkill; detail: ApiRoutes['/repositories/preview']};
+interface Dependencies {react: typeof React; Modal: React.ComponentType<ModalProps>; Input: typeof Primitives.Input; SourceSelect: React.ComponentType<SourceSelectProps>; api: ApiCall; headers: Record<string, string>; translateError: (t: Translate, error: unknown) => string}
+import type { CodedError } from "./types.js";
 // 仓库页复用宿主技能面板组件；只在进入页签时读取本地目录缓存。
 export const repositoryLocales = {
   zh: {
@@ -31,39 +43,40 @@ export const repositoryLocales = {
 const CSS = `.dssm-repo-spinner{display:inline-block;width:12px;height:12px;margin-right:6px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dssm-repo-spin .8s linear infinite}@keyframes dssm-repo-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.dssm-repo-spinner{animation:none}}.dssm-repo-panel{display:flex;flex-direction:column;gap:12px;min-width:0}.dssm-repo-row{display:flex;align-items:center;gap:8px;padding:11px 13px;border-top:1px solid var(--dsw-alias-border-l1,#3a3a3a)}.dssm-repo-row:first-child{border-top:0}.dssm-repo-main{flex:1;min-width:0}.dssm-repo-description{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:12px}.dssm-repo-filters{display:flex;gap:9px}.dssm-repo-filters>*{flex:1;min-width:0}.dssm-repo-panel .dssm-desc{margin:0}.dssm-repo-metadata{font-size:11px;color:var(--dsw-alias-label-tertiary,#a0a0a0);overflow-wrap:anywhere}.dssm-repo-panel .dssm-source{flex-shrink:0}.dssm-tabs{gap:20px;overflow-x:auto}@container(max-width:400px){.dssm-repo-row{flex-wrap:wrap}.dssm-repo-main{flex-basis:100%}.dssm-tabs{gap:12px}}`;
 
 /** 返回动作区与内容区，使现有标题、页签顺序保持不变。 */
-export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, headers, translateError }) {
+export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, headers, translateError }: Dependencies) {
   const h = react.createElement;
-  return function useRepositoryUI({ active, t, onInstalled }) {
-    const [repos, setRepos] = react.useState([]);
+  return function useRepositoryUI({ active, t, onInstalled }: {active: boolean; t: Translate; onInstalled?: () => unknown}) {
+    const [repos, setRepos] = react.useState<RepoView[]>([]);
     const [busy, setBusy] = react.useState(false);
-    const [refreshing, setRefreshing] = react.useState(null);
-    const [feedback, setFeedback] = react.useState(null);
-    const [installation, setInstallation] = react.useState(null);
+    const [refreshing, setRefreshing] = react.useState<{id: string; name: string; index: number; total: number} | null>(null);
+    const [feedback, setFeedback] = react.useState<Feedback | null>(null);
+    const [installation, setInstallation] = react.useState<Installation | null>(null);
     const [query, setQuery] = react.useState("");
     const [source, setSource] = react.useState("");
     const [status, setStatus] = react.useState("");
-    const [expanded, setExpanded] = react.useState({});
-    const [modal, setModal] = react.useState(null);
-    const [form, setForm] = react.useState({ url: "", ref: "", subdirectory: "" });
+    const [expanded, setExpanded] = react.useState<Record<string, boolean>>({});
+    const [modal, setModal] = react.useState<RepoModal | null>(null);
+    const [form, setForm] = react.useState<Record<string, string>>({ url: "", ref: "", subdirectory: "" });
     const locked = react.useRef(false);
     const mounted = react.useRef(true);
     react.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
     async function load() { const data = await api("/repositories"); if (mounted.current) setRepos(data.repositories || []); }
-    function message(error) {
-      if (t("format.locale") === "zh-CN" && error.code === "error.repo.invalid") return error.error || error.message || t(error.code);
-      return translateError(t, error) || error.message || String(error);
+    function message(error: unknown) {
+      const item = error as Diagnostic & {message?: string};
+      if (t("format.locale") === "zh-CN" && item.code === "error.repo.invalid") return item.error || item.message || t(item.code);
+      return translateError(t, error) || item.message || String(error);
     }
-    function feedbackText(value) { return value.payload ? message(value.payload) : (value.key ? t(value.key) : value.text || "") + (value.name ? " · " + value.name : ""); }
-    async function perform(task, reload = true, quiet = false) {
+    function feedbackText(value: Feedback) { return value.payload ? message(value.payload) : (value.key ? t(value.key) : value.text || "") + (value.name ? " · " + value.name : ""); }
+    async function perform(task: () => Promise<unknown>, reload = true, quiet = false) {
       if (locked.current) return;
       locked.current = true; if (!quiet) { setBusy(true); setFeedback(null); }
       try { await task(); if (reload) await load(); }
-      catch (error) { if (mounted.current) setFeedback({ error: true, payload: error }); }
+      catch (caught) { const error = caught as CodedError; if (mounted.current) setFeedback({ error: true, payload: error }); }
       finally { locked.current = false; if (mounted.current) setBusy(false); }
     }
-    function post(action, body) { return api("/repositories/" + action, { method: "POST", headers, body: JSON.stringify(body) }); }
-    async function refreshRepo(id) { const result = await post("refresh", { id }); if (result.error) setFeedback({ error: true, payload: result.error }); }
-    function refresh(selected) {
+    function post<K extends RepositoryAction>(action: K, body: unknown) { return api(`/repositories/${action}` as `/repositories/${K}`, { method: "POST", headers, body: JSON.stringify(body) }); }
+    async function refreshRepo(id: string) { const result = await post("refresh", { id }); if (result.error) setFeedback({ error: true, payload: result.error }); }
+    function refresh(selected: RepoView[]) {
       return perform(async () => {
         let failed = false;
         try {
@@ -78,30 +91,30 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
         } finally { if (mounted.current) setRefreshing(null); }
       }, false);
     }
-    function openDetail(repo, skill) {
+    function openDetail(repo: RepoView, skill: RepoSkill) {
       return perform(async () => {
         setModal({ type: "detail", repo, loading: true });
         try {
           const detail = await post("detail", { id: repo.id, path: skill.path });
           if (mounted.current) setModal({ type: "detail", detail, repo });
-        } catch (error) { if (mounted.current) setModal({ type: "detail", repo, failed: true }); throw error; }
+        } catch (caught) { const error = caught as CodedError; if (mounted.current) setModal({ type: "detail", repo, failed: true }); throw error; }
       }, false, true);
     }
     react.useEffect(() => { if (active) perform(load, false); }, [active]);
-    function button(key, action, secondary = true, disabled = false) { return h("button", { type: "button", className: "dssm-btn" + (secondary ? " dssm-btn-secondary" : ""), disabled: busy || disabled, onClick: action }, t(key)); }
-    function refreshButton(selected, row = false) {
+    function button(key: string, action: () => unknown, secondary = true, disabled = false) { return h("button", { type: "button", className: "dssm-btn" + (secondary ? " dssm-btn-secondary" : ""), disabled: busy || disabled, onClick: action }, t(key)); }
+    function refreshButton(selected: RepoView[], row = false) {
       const pending = refreshing && (!row || refreshing.id === selected[0]?.id);
       return h("button", { type: "button", className: "dssm-btn dssm-btn-secondary", disabled: busy || !selected.length, "aria-busy": !!pending, onClick: () => refresh(selected) },
         pending ? h("span", { className: "dssm-repo-spinner", "aria-hidden": true }) : null, t(pending ? "repo.refreshing" : "repo.refresh"));
     }
     function close() { if (!locked.current) setModal(null); }
-    function install(repo, skill) {
+    function install(repo: RepoView, skill: RepoSkill) {
       return perform(async () => {
         const target = { id: repo.id, path: skill.path };
         setInstallation({ ...target, pending: true, key: "repo.installProgress" });
         try {
           await post("install", target);
-        } catch (error) {
+        } catch (caught) { const error = caught as CodedError;
           if (mounted.current) setInstallation({ ...target, error: true, payload: error });
           throw error;
         }
@@ -112,20 +125,21 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
         if (onInstalled) await onInstalled();
       });
     }
-    function preview(repo, skill, rollback = false) {
+    function preview(repo: RepoView, skill: RepoSkill, rollback = false) {
       return perform(async () => {
         const detail = await post("preview", { id: repo.id, path: skill.path, rollback });
         setModal({ type: rollback ? "rollback" : "review", repo, skill, detail });
       });
     }
     function update() {
+      if (!modal || (modal.type !== "review" && modal.type !== "rollback")) return;
       const selected = modal, rollback = selected.type === "rollback";
       return perform(async () => {
         const target = { id: selected.repo.id, path: selected.skill.path };
         setInstallation({ ...target, pending: true, key: "repo.updateProgress" });
         try {
           await post(rollback ? "rollback" : "update", { ...target, token: selected.detail.token, overwrite: selected.detail.localModified });
-        } catch (error) {
+        } catch (caught) { const error = caught as CodedError;
           if (mounted.current) setInstallation({ ...target, error: true, payload: error });
           throw error;
         }
@@ -158,7 +172,7 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
           skill.canRollback ? button("repo.rollback", () => preview(repo, skill, true)) : null,
           button(installation?.id === repo.id && installation.path === skill.path && installation.pending ? "repo.installing" : skill.status === "available" ? "repo.install" : "repo." + skill.status, () => install(repo, skill), skill.status !== "available", skill.status !== "available"))) : h("div", { className: "dssm-empty" }, t("repo.noSkills")) : null));
     });
-    function select(label, value, change, options) {
+    function select(label: string, value: string, change: (value: string) => void, options: string[][]) {
       return h(SourceSelect, { label: t(label), value, onChange: change, options: [{ value: "", label: t(label) }, ...options.map(([id, text]) => ({ value: id, label: text }))] });
     }
     const feedbackNode = feedback ? h("div", { className: "dssm-feedback" + (feedback.error ? " dssm-error" : ""), role: "status" }, feedbackText(feedback)) : null;
@@ -168,19 +182,19 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
       let body;
       if (modal.type === "review" || modal.type === "rollback") body = h("div", { className: "dssm-repo-panel" },
         h("div", { className: "dssm-name" }, modal.skill.name),
-        h("div", { className: "dssm-repo-metadata" }, modal.repo.owner + "/" + modal.repo.name + " · " + modal.detail.commit.slice(0, 7)),
+        h("div", { className: "dssm-repo-metadata" }, modal.repo.owner + "/" + modal.repo.name + " · " + modal.detail.commit?.slice(0, 7)),
         modal.detail.localModified ? h("p", { className: "dssm-feedback dssm-warning", role: "alert" }, t("repo.modified")) : null,
         modal.detail.changes.length ? h("ul", { style: { maxHeight: "240px", overflow: "auto", overflowWrap: "anywhere", paddingLeft: "20px" } }, modal.detail.changes.map(change => h("li", { key: change.path }, t("repo." + (change.kind === "modified" ? "modifiedFile" : change.kind)) + " · " + change.path))) : h("p", null, t("repo.noChanges")),
         busy ? h("div", { role: "status" }, t("repo.updateProgress")) : null, feedbackNode,
         h("div", { className: "dssm-modal-actions" }, button("repo.cancel", close), button(modal.detail.localModified ? "repo.overwrite" : modal.type === "rollback" ? "repo.confirmRollback" : "repo.confirmUpdate", update, false, !modal.detail.changes.length)));
-      if (modal.type === "add") body = h("form", { className: "dssm-form", onSubmit: (e) => { e.preventDefault(); if (!form.url.trim()) return; perform(async () => { const repo = await post("add", form); await refreshRepo(repo.id); setModal(null); }); } },
+      if (modal.type === "add") body = h("form", { className: "dssm-form", onSubmit: (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!form.url.trim()) return; perform(async () => { const repo = await post("add", form); await refreshRepo(repo.id); setModal(null); }); } },
         [["url", "repo.url", "https://github.com/owner/repo"], ["ref", "repo.ref", t("repo.defaultBranch")], ["subdirectory", "repo.directory", t("repo.directoryHint")]].map(([key, label, placeholder]) => h("label", { className: "dssm-field", key }, h("span", { className: "dssm-label" }, t(label)), h(Input, { className: "dssm-input", "aria-label": t(label), value: form[key], placeholder, maxLength: key === "url" ? 2048 : 512, required: key === "url", disabled: busy, onChange: (e) => setForm({ ...form, [key]: e.target.value }) }))),
         feedbackNode, h("div", { className: "dssm-modal-actions" }, button("repo.cancel", close), button("repo.save", () => { if (form.url.trim()) perform(async () => { const repo = await post("add", form); await refreshRepo(repo.id); setModal(null); }); }, false, !form.url.trim())));
       if (modal.type === "manage") body = h("div", { className: "dssm-repo-panel" }, h("p", { className: "dssm-desc" }, t("repo.removeHint")), refreshProgress, feedbackNode, repos.length ? repos.map((repo) => h("div", { key: repo.id, className: "dssm-repo-row" },
         h("div", { className: "dssm-repo-main" }, h("div", { className: "dssm-name" }, repo.owner + "/" + repo.name), h("div", { className: "dssm-note" }, [repo.ref || t("repo.defaultBranch"), repo.subdirectory].filter(Boolean).join(" · ")), h("div", { className: "dssm-repo-metadata" }, repo.refreshedAt ? t("repo.updated") + " · " + new Date(repo.refreshedAt).toLocaleString(t("format.locale")) : t("repo.notScanned"))),
         refreshButton([repo], true), button("repo.remove", () => setModal({ type: "remove", repo })) )) : h("div", { className: "dssm-empty" }, t("repo.empty")));
       if (modal.type === "remove") body = h("div", null, h("p", { className: "dssm-desc" }, modal.repo.owner + "/" + modal.repo.name), h("p", { className: "dssm-desc" }, t("repo.removeHint")), feedbackNode,
-        h("div", { className: "dssm-modal-actions" }, button("repo.cancel", () => setModal({ type: "manage" })), button("repo.removeConfirm", () => perform(async () => { await post("remove", { id: modal.repo.id }); if (source === modal.repo.id) setSource(""); setModal({ type: "manage" }); }), false)));
+        h("div", { className: "dssm-modal-actions" }, button("repo.cancel", () => setModal({ type: "manage" })), button("repo.removeConfirm", () => perform(async () => { await post("remove", { id: (modal as Extract<RepoModal, {type: "remove"}>).repo.id }); if (source === (modal as Extract<RepoModal, {type: "remove"}>).repo.id) setSource(""); setModal({ type: "manage" }); }), false)));
       if (modal.type === "detail" && modal.detail) body = h("div", { className: "dssm-repo-panel" }, h("div", { className: "dssm-name" }, modal.detail.name), h("p", { className: "dssm-desc" }, modal.detail.description), h("div", { className: "dssm-detail-path" }, modal.repo.owner + "/" + modal.repo.name + " · " + modal.detail.path), h("div", { className: "dssm-repo-metadata" }, t("repo.commit") + " · " + modal.detail.commit), h("p", { className: "dssm-note" }, t("repo.installHint")), h("pre", { className: "dssm-code" }, modal.detail.body));
       if (modal.type === "detail" && !modal.detail) body = h("div", { role: "status", className: "dssm-repo-panel" }, modal.loading ? t("repo.detailLoading") : null, modal.failed ? feedbackNode : null);
       dialog = h(Modal, { title: t("repo." + (modal.type === "remove" ? "remove" : modal.type)), closeLabel: t("repo.close"), onClose: close }, body);
@@ -190,6 +204,6 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
       h("div", { className: "dssm-repo-filters" }, select("repo.all", source, setSource, repos.map((r) => [r.id, r.owner + "/" + r.name])), select("repo.states", status, (value) => { setStatus(value); setExpanded({}); }, ["available", "installed", "update", "conflict", "invalid"].map((s) => [s, t("repo." + s)]))),
       feedbackNode, !modal ? refreshProgress : null, busy && !refreshing ? h("div", { className: "dssm-note", role: "status" }, t("repo.loading")) : null,
       repos.length ? groups : h("div", { className: "dssm-empty" }, t("repo.empty")), h("p", { className: "dssm-note" }, t("repo.footer")), dialog);
-    return { actions, content, focusSource: (origin, name) => { setSource(origin.id); setQuery(name); setStatus(""); setExpanded({ [origin.id]: true }); } };
+    return { actions, content, focusSource: (origin: InstallSource, name: string) => { setSource(origin.id); setQuery(name); setStatus(""); setExpanded({ [origin.id]: true }); } };
   };
 }

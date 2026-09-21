@@ -495,6 +495,20 @@ await parseApiResponse({
   },
 );
 const trapModalFocus = bundle.trapModalFocus;
+const recoverModalFocus = bundle.recoverModalFocus;
+ok(typeof recoverModalFocus === "function", "异步提交后支持恢复丢失的弹窗焦点");
+if (typeof recoverModalFocus === "function") {
+  let recovered = 0;
+  const body = {};
+  const input = {};
+  const modal = { focus() { recovered++; } };
+  recoverModalFocus(modal, body, body);
+  eq(recovered, 1, "按钮被禁用后焦点落到页面，应回到弹窗");
+  recoverModalFocus(modal, input, body);
+  eq(recovered, 1, "输入框仍持有焦点时不抢夺焦点");
+  recoverModalFocus(null, body, body);
+  eq(recovered, 1, "弹窗卸载后不再恢复焦点");
+}
 ok(
   typeof trapModalFocus === "function",
   "factory exports modal focus trapping for regression tests",

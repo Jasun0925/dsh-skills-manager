@@ -1,13 +1,16 @@
+import type * as React from "react";
+import type * as Primitives from "@deepseek-ai/dsh-client-ui-primitives";
+import type {SourceSelectProps} from "./client-types.js";
 // 统一使用宿主菜单，颜色、键盘导航、弹层定位与选中标记交给官方组件。
-export function createSourceSelect(react, primitives) {
+export function createSourceSelect(react: typeof React, primitives: typeof Primitives) {
   const h = react.createElement;
-  return function SourceSelect(props) {
+  return function SourceSelect(props: SourceSelectProps) {
     const [open, setOpen] = react.useState(false);
-    const anchorRef = react.useRef(null);
+    const anchorRef = react.useRef<HTMLButtonElement>(null);
     react.useEffect(() => {
       if (!open) return;
       // 宿主设置窗口也监听Escape，菜单必须先消费它，避免父窗口一起关闭。
-      const escape = event => {
+      const escape = (event: KeyboardEvent) => {
         if (event.key !== "Escape") return;
         event.preventDefault(); event.stopImmediatePropagation();
         setOpen(false); anchorRef.current?.focus();
@@ -26,8 +29,8 @@ export function createSourceSelect(react, primitives) {
         ref: anchorRef, type: "button", className: props.action ? "dssm-btn dssm-btn-quiet" : "dssm-control dssm-select-trigger", disabled: props.disabled,
         "aria-label": props.label, "aria-haspopup": "menu", "aria-expanded": open,
         onClick: () => setOpen(!open),
-        onKeyDown: event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); } },
-      }, h("span", { className: "dssm-select-value" }, props.action ? props.label : selected?.label || props.label), props.action ? null : h(primitives.IconChevronDownOutline14, { className: "dssm-select-chevron", "aria-hidden": true })),
+        onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); } },
+      }, h("span", { className: "dssm-select-value" }, props.action ? props.label : selected?.label || props.label), props.action ? null : h(primitives.IconChevronDownOutline14, { className: "dssm-select-chevron", ...{"aria-hidden": true} })),
     });
   };
 }

@@ -1,6 +1,6 @@
 // 验证真实事件的筛选、折叠、添加和安装行为。
 import assert from "node:assert/strict";
-import { createRepositoryUI } from "../src/repository-ui.js";
+import { createRepositoryUI } from "../src/repository-ui.ts";
 let values = [], cursor = 0, effects = [], dependencies = [];
 const react = {
   createElement(type, props, ...children) { return { type, props: props || {}, children: children.flat(Infinity).filter((v) => v != null && typeof v !== "boolean") }; },

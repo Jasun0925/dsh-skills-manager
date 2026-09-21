@@ -1,17 +1,19 @@
+import type { CodedError } from "./types.js";
+import type { Archive, FileDigest, RepositoryDependencies, SkillRequest, InstallSource } from "./types.js";
 // 仓库更新使用完整文件摘要预览和目录切换，保留备份，不执行下载内容。
 import { promises as fs } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { managerHomePath, userRoots } from "./core.js";
 
-const hash = bytes => createHash("sha256").update(bytes).digest("hex");
-export const fileIndex = entries => Object.entries(entries).map(([path, bytes]) => ({ path, hash: hash(bytes) })).sort((a, b) => a.path.localeCompare(b.path, "en"));
-export const signature = files => hash(JSON.stringify([...files].map(({ path, hash }) => ({ path, hash })).sort((a, b) => a.path.localeCompare(b.path, "en"))));
-function failure(message, code = "error.repo.invalid") { return Object.assign(new Error(message), { code, statusCode: 400 }); }
-function safePath(path) {
+const hash = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+export const fileIndex = (entries: Archive) => Object.entries(entries!).map(([path, bytes]) => ({ path, hash: hash(bytes) })).sort((a, b) => a.path.localeCompare(b.path, "en"));
+export const signature = (files: FileDigest[]) => hash(JSON.stringify([...files].map(({ path, hash }) => ({ path, hash })).sort((a, b) => a.path.localeCompare(b.path, "en"))));
+function failure(message: string, code = "error.repo.invalid") { return Object.assign(new Error(message), { code, statusCode: 400 }); }
+function safePath(path: string) {
   if (typeof path !== "string" || !path || path.length > 512 || path.split("/").length > 64 || path.split("/").some(p => !p || p === "." || p === ".." || /[\\:<>"|?*\x00-\x1f]/.test(p) || /[. ]$/.test(p) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) throw failure("技能文件路径无效");
 }
-async function safeDirectory(root) {
+async function safeDirectory(root: string) {
   for (let p = root; ; p = dirname(p)) {
     const info = await fs.lstat(p);
     if (info.isSymbolicLink() || !info.isDirectory()) throw failure("技能或备份目录包含链接");
@@ -19,10 +21,10 @@ async function safeDirectory(root) {
   }
 }
 /** 完整读取目录，新增文件参与冲突检测，禁止跟随链接。 */
-export async function readSkillTree(root) {
+export async function readSkillTree(root: string) {
   await safeDirectory(root);
-  const result = Object.create(null); let size = 0, count = 0;
-  async function walk(dir, prefix = "") {
+  const result: Archive = Object.create(null); let size = 0, count = 0;
+  async function walk(dir: string, prefix = "") {
     for (const entry of await fs.readdir(dir)) {
       const path = prefix + entry; safePath(path);
       if (++count > 2000) throw failure("技能目录数量超限");
@@ -37,22 +39,22 @@ export async function readSkillTree(root) {
   }
   await walk(root); return result;
 }
-function changesBetween(before, after) {
+function changesBetween(before: FileDigest[], after: FileDigest[]) {
   const a = new Map(before.map(f => [f.path, f.hash])), b = new Map(after.map(f => [f.path, f.hash]));
   return [...new Set([...a.keys(), ...b.keys()])].sort().filter(p => a.get(p) !== b.get(p)).map(path => ({ path, kind: !a.has(path) ? "added" : !b.has(path) ? "removed" : "modified" }));
 }
 
 /** 注入现有仓库存储与串行队列，避免更新和安装互相覆盖状态。 */
-export function createRepositoryUpdater({ read, write, repository, download, serialize, parseRepositoryInput }) {
-  async function prepare(input, includeArchive = false) {
+export function createRepositoryUpdater({ read, write, repository, download, serialize, parseRepositoryInput }: RepositoryDependencies) {
+  async function prepare(input: SkillRequest, includeArchive = false) {
     const { id, path } = input, data = await read();
     const record = data.installs.find(i => i.id === id && i.path === path && i.complete);
     if (!record) throw failure("没有可追溯的安装记录，不能在线更新");
-    const target = join(userRoots().find(r => r.key === "dsh").path, record.name);
+    const target = join(userRoots().find(r => r.key === "dsh")!.path, record.name);
     const current = fileIndex(await readSkillTree(target));
-    let entries, next, commit;
+    let entries: Archive | undefined, next: FileDigest[], commit: string | null;
     if (input.rollback === true) {
-      const backup = record.backup;
+      const backup = record.backup!;
       if (!/^[a-f0-9-]{36}$/.test(backup?.key || "") || backup.record?.name !== record.name || backup.record?.id !== id || backup.record?.path !== path || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(backup.record?.commit || "") || !Array.isArray(backup.record?.files)) throw failure("没有有效的上一版备份");
       entries = await readSkillTree(join(managerHomePath(), "repository-backups", backup.key)); next = fileIndex(entries);
       if (signature(next) !== backup.fingerprint) throw failure("备份内容已变化，拒绝回退");
@@ -70,7 +72,7 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
     const token = hash(JSON.stringify({ id, path, commit, current, next, rollback: input.rollback === true }));
     return { data, record, target, entries, next, current, token, commit, localModified: signature(current) !== signature(record.files), changes: changesBetween(current, next) };
   }
-  async function replace(input, rollback = false) {
+  async function replace(input: SkillRequest, rollback = false) {
     const plan = await prepare({ ...input, rollback }, true);
     if (typeof input.token !== "string" || input.token !== plan.token) throw failure("文件或版本已变化，请重新预览");
     if (plan.localModified && input.overwrite !== true) throw failure("存在本地修改，请确认备份后替换", "error.repo.modified");
@@ -81,21 +83,21 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
     await fs.mkdir(stage);
     let moved = false, replaced = false, recoveryFailed = false;
     try {
-      for (const [path, bytes] of Object.entries(entries)) {
+      for (const [path, bytes] of Object.entries(entries!)) {
         safePath(path); const file = join(stage, ...path.split("/"));
         await fs.mkdir(dirname(file), { recursive: true }); await fs.writeFile(file, bytes, { flag: "wx" });
       }
       // 下载期间仍可能编辑文件，替换前复验，避免覆盖预览之后的修改。
       if (signature(fileIndex(await readSkillTree(target))) !== signature(plan.current)) throw failure("本地文件已变化，请重新预览");
       const previous = { ...record }; delete previous.backup;
-      const nextRecord = rollback ? { ...record.backup.record } : { ...previous, commit: plan.commit, files: plan.next };
+      const nextRecord = rollback ? { ...record.backup!.record } : { ...previous, commit: plan.commit, files: plan.next };
       nextRecord.backup = { key, fingerprint: signature(plan.current), record: previous };
       // 跨卷或文件锁导致重命名失败时直接终止，不降级为覆盖复制。
       await fs.rename(target, backup); moved = true;
       await fs.rename(stage, target); replaced = true;
       data.installs[data.installs.indexOf(record)] = nextRecord;
       await write(data);
-    } catch (error) {
+    } catch (caught) { const error = caught as CodedError;
       if (moved) {
         try {
           if (replaced) await fs.rename(target, stage);
@@ -107,7 +109,7 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
     return { name: record.name, commit: plan.commit };
   }
   async function sources() {
-    const data = await read(), result = Object.create(null);
+    const data = await read(), result: Record<string, InstallSource> = Object.create(null);
     for (const record of data.installs.filter(i => i.complete)) {
       const source = record.source || data.repositories.find(r => r.id === record.id);
       if (!source) continue;
@@ -118,8 +120,8 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
   }
   return {
     sources,
-    preview: input => serialize(async () => { const p = await prepare(input); return { token: p.token, commit: p.commit, localModified: p.localModified, changes: p.changes, rollback: input.rollback === true }; }),
-    update: input => serialize(() => replace(input)),
-    rollback: input => serialize(() => replace(input, true)),
+    preview: (input: SkillRequest) => serialize(async () => { const p = await prepare(input); return { token: p.token, commit: p.commit, localModified: p.localModified, changes: p.changes, rollback: input.rollback === true }; }),
+    update: (input: SkillRequest) => serialize(() => replace(input)),
+    rollback: (input: SkillRequest) => serialize(() => replace(input, true)),
   };
 }

@@ -1,3 +1,8 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { HostContext, ProviderControl, Agent } from "./host-types.js";
+import type { Log, Serialize, CreateInput, UploadInput, SkillRequest, RepositoryInput, ScopeOptions } from "./types.js";
+import type { ProviderCandidate } from "./core.js";
+import type { CodedError } from "./types.js";
 // dsh-skills-manager host half：设置面板的 HTTP 后端（webServer prefix 路由）
 // - host 路由仅依赖 node: 内置与本地 core.js；ZIP 解压封装在 core
 // - 路由：状态、启停、详情、创建、导入、回收站
@@ -34,7 +39,7 @@ const MAX_LOG_BYTES = 1 << 20;
 // 文件夹上传允许 64 MiB 原始内容；Base64 会膨胀约 1/3，再为最多 1000 条路径预留余量。
 const MAX_UPLOAD_BODY_BYTES = 88 << 20;
 
-function makeLog() {
+function makeLog(): Log {
   const file = logPath();
   let queue = Promise.resolve();
   return async (event, detail) => {
@@ -54,12 +59,12 @@ function makeLog() {
   };
 }
 
-function readBody(req, limit = 1 << 20) {
-  return new Promise((resolve, reject) => {
+function readBody(req: IncomingMessage, limit = 1 << 20) {
+  return new Promise<RequestBody>((resolve, reject) => {
     let size = 0;
     let settled = false;
-    const chunks = [];
-    const fail = (error) => {
+    const chunks: Buffer[] = [];
+    const fail = (error: Error) => {
       if (settled) return;
       settled = true;
       reject(error);
@@ -68,7 +73,7 @@ function readBody(req, limit = 1 << 20) {
       if (settled) return;
       size += c.length;
       if (size > limit) {
-        const error = new Error("body too large");
+        const error: CodedError = new Error("body too large");
         error.statusCode = 413;
         error.code = "error.proto.bodyTooLarge";
         fail(error);
@@ -81,11 +86,11 @@ function readBody(req, limit = 1 << 20) {
       if (settled) return;
       try {
         const raw = Buffer.concat(chunks).toString("utf8");
-        const body = raw ? JSON.parse(raw) : {};
+        const body: RequestBody = raw ? JSON.parse(raw) : {};
         settled = true;
         resolve(body);
-      } catch (e) {
-        const error = new Error(`invalid JSON body: ${e.message}`);
+      } catch (caught) { const e = caught as CodedError;
+        const error: CodedError = new Error(`invalid JSON body: ${e.message}`);
         error.statusCode = 400;
         error.code = "error.proto.invalidJson";
         fail(error);
@@ -96,7 +101,7 @@ function readBody(req, limit = 1 << 20) {
 }
 
 /** 将裸 `host[:port]` authority 解析为 URL；非法形态返回 undefined。 */
-function parseAuthority(authority) {
+function parseAuthority(authority: string) {
   try {
     return new URL(`http://${authority}`);
   } catch {
@@ -108,25 +113,25 @@ function parseAuthority(authority) {
  * 返回 authority 的规范形态。用 http/https 双重解析保留显式的 :80 / :443，
  * 避免默认端口被 WHATWG URL 自动剥离后意外扩大为任意端口授权。
  */
-function canonicalAuthority(authority, parsed) {
+function canonicalAuthority(authority: string, parsed: URL) {
   const port = parsed.port !== "" ? parsed.port : new URL(`https://${authority}`).port;
   return port === "" ? parsed.hostname : `${parsed.hostname}:${port}`;
 }
 
 /** 只接受纯净、规范的 host[:port]，拒绝路径、userinfo、空白和非规范端口。 */
-function isCanonicalAuthority(authority, parsed) {
+function isCanonicalAuthority(authority: string, parsed: URL) {
   return canonicalAuthority(authority, parsed) === authority.toLowerCase();
 }
 
 /** 与 DSH `/api` 信任栅栏一致：localhost、IPv6 loopback 或 IPv4 127/8。 */
-function isLoopbackHostname(hostname) {
+function isLoopbackHostname(hostname: string) {
   if (hostname === "localhost" || hostname === "[::1]") return true;
   const parts = hostname.split(".");
   return parts.length === 4 && parts[0] === "127" && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }
 
 /** 带端口的 trustedHosts 条目精确匹配；不带端口的条目匹配同主机的任意端口。 */
-function isTrustedAuthority(hostUrl, trustedHosts) {
+function isTrustedAuthority(hostUrl: URL, trustedHosts: string[]) {
   return trustedHosts.some((entry) => {
     if (typeof entry !== "string") return false;
     const entryUrl = parseAuthority(entry);
@@ -141,7 +146,7 @@ function isTrustedAuthority(hostUrl, trustedHosts) {
  * 复用 DSH Web runtime 的 trustedHosts（LAN IP + `--trusted-host`），同时
  * 保留 loopback 默认值；未知 Host、跨站 Fetch 或异源 Origin 继续拒绝。
  */
-function validateRequestOrigin(req, trustedHosts = []) {
+function validateRequestOrigin(req: IncomingMessage, trustedHosts: string[] = []) {
   const host = typeof req.headers.host === "string" ? req.headers.host : "";
   const hostUrl = parseAuthority(host);
   if (!hostUrl || !isCanonicalAuthority(host, hostUrl)) {
@@ -167,7 +172,7 @@ function validateRequestOrigin(req, trustedHosts = []) {
 }
 
 /** 写接口额外要求自定义头与 JSON；自定义头迫使跨站 fetch 预检，且本接口不回 CORS。 */
-function validateMutationRequest(req, trustedHosts) {
+function validateMutationRequest(req: IncomingMessage, trustedHosts: string[]) {
   const hostError = validateRequestOrigin(req, trustedHosts);
   if (hostError) return hostError;
   if (req.headers[CLIENT_MARKER_HEADER] !== "1") return { statusCode: 403, code: "error.proto.forbidden", error: "forbidden mutation request" };
@@ -176,7 +181,7 @@ function validateMutationRequest(req, trustedHosts) {
   return null;
 }
 
-function json(res, code, payload, headOnly) {
+function json(res: ServerResponse, code: number, payload: unknown, headOnly = false) {
   if (!res || res.writableEnded || res.destroyed) return;
   res.once("error", () => {});
   try {
@@ -193,9 +198,9 @@ function json(res, code, payload, headOnly) {
 }
 
 /** 成功统一包成 { ok: true, data }；核心返回 { ok:false, error } 时透传为 400。 */
-function run(res, task, afterSuccess, headOnly) {
+function run(res: ServerResponse, task: () => unknown, afterSuccess?: () => void, headOnly = false) {
   return Promise.resolve().then(task).then((r) => {
-    if (r && r.ok === false) json(res, 400, r, headOnly);
+    if (r && typeof r === "object" && "ok" in r && r.ok === false) json(res, 400, r, headOnly);
     else {
       try {
         if (afterSuccess) afterSuccess();
@@ -206,7 +211,7 @@ function run(res, task, afterSuccess, headOnly) {
     }
   }).catch((e) => {
     try {
-      json(res, Number.isInteger(e && e.statusCode) ? e.statusCode : 500, {
+      json(res, Number.isInteger(e && e.statusCode) ? e.statusCode! : 500, {
         ok: false,
         ...(e && e.code ? { code: e.code } : {}),
         error: String(e && e.message ? e.message : e),
@@ -218,7 +223,7 @@ function run(res, task, afterSuccess, headOnly) {
 }
 
 /** 文件写入后刷新宿主技能目录，并通知 Web 端重拉 `/` 菜单缓存。 */
-function notifyChatCatalog(ctx, invalidateSkills) {
+function notifyChatCatalog(ctx: HostContext, invalidateSkills?: () => void) {
   try {
     if (typeof invalidateSkills === "function") invalidateSkills();
   } catch {
@@ -248,7 +253,7 @@ function notifyChatCatalog(ctx, invalidateSkills) {
 }
 
 /** 仅从客户端当前选中的已知 Session 解析工作目录；缺失或失效时不回退其他会话。 */
-function activeSessionCwds(ctx, sessionId) {
+function activeSessionCwds(ctx: HostContext, sessionId: unknown) {
   if (typeof sessionId !== "string" || !sessionId.trim()) return [];
   const sessions = ctx.sessions || (typeof ctx.get === "function" ? ctx.get("sessions") : undefined);
   if (!sessions) return [];
@@ -258,7 +263,7 @@ function activeSessionCwds(ctx, sessionId) {
   return typeof cwd === "string" && cwd.trim() ? [cwd.trim()] : [];
 }
 
-function externalSkillProvider(control, invalidators) {
+function externalSkillProvider(control: ProviderControl, invalidators: Set<() => void>) {
   invalidators.add(control.invalidate);
   if (control.signal && typeof control.signal.addEventListener === "function") {
     control.signal.addEventListener("abort", () => {
@@ -267,8 +272,8 @@ function externalSkillProvider(control, invalidators) {
   }
   return {
     name: "dsh-skills-manager-external",
-    list: async (options) => listProviderCandidates(options),
-    get: async (candidate, options) => getProviderSkill(candidate, options),
+    list: async (options?: ScopeOptions) => listProviderCandidates(options),
+    get: async (candidate: ProviderCandidate, options?: ScopeOptions) => getProviderSkill(candidate, options),
   };
 }
 
@@ -277,11 +282,11 @@ function externalSkillProvider(control, invalidators) {
  * skill layer. Register the manager policy once more in each live agent's own
  * layer so disabled shared skills cannot fall through to that native provider.
  */
-function registerAgentSkillProviders(ctx, invalidators) {
+function registerAgentSkillProviders(ctx: HostContext, invalidators: Set<() => void>) {
   if (typeof ctx.on !== "function") return () => {};
-  const registrations = new Map();
+  const registrations = new Map<string, () => void>();
 
-  const install = (agent) => {
+  const install = (agent: Agent) => {
     if (!agent || registrations.has(agent.id)) return;
     const agentCtx = agent.ctx;
     const skills = agentCtx && typeof agentCtx.get === "function"
@@ -292,7 +297,7 @@ function registerAgentSkillProviders(ctx, invalidators) {
     registrations.set(agent.id, dispose);
   };
 
-  const uninstall = (agent) => {
+  const uninstall = (agent: Agent) => {
     if (!agent) return;
     const dispose = registrations.get(agent.id);
     registrations.delete(agent.id);
@@ -316,7 +321,7 @@ function registerAgentSkillProviders(ctx, invalidators) {
   };
 }
 
-function apply(ctx) {
+function apply(ctx: HostContext) {
   ctx.effect(() => registerPluginUpdater(ctx, {
     endpoint: "/api/michengai/dsh-skills-manager/update",
     packageName: "@michengai/dsh-skills-manager",
@@ -328,13 +333,13 @@ function apply(ctx) {
   const roots = userRoots();
   const rootByKey = Object.fromEntries(roots.map((r) => [r.key, r]));
 
-  const providerInvalidators = new Set();
+  const providerInvalidators = new Set<() => void>();
   const invalidateSkills = () => {
     for (const invalidate of providerInvalidators) invalidate();
   };
   const afterWrite = () => notifyChatCatalog(ctx, invalidateSkills);
-  let mutationQueue = Promise.resolve();
-  const enqueueMutation = (task) => {
+  let mutationQueue: Promise<unknown> = Promise.resolve();
+  const enqueueMutation: Serialize = (task) => {
     const queued = mutationQueue.then(task, task);
     mutationQueue = queued.catch(() => undefined);
     return queued;
@@ -343,7 +348,7 @@ function apply(ctx) {
   ctx.effect(() => registerAgentSkillProviders(ctx, providerInvalidators), "skills-manager agent-scoped external skills providers");
 
   if (ctx.tools && typeof ctx.tools.register === "function") {
-    ctx.effect(() => ctx.tools.register({
+    ctx.effect(() => ctx.tools!.register({
       name: "create_skill",
       description: "Create a new local DSH skill in DSH_HOME/skills. Use only when the user explicitly asks to create or save a reusable skill.",
       parameters: {
@@ -381,17 +386,17 @@ function apply(ctx) {
     kind: "prefix",
     path: "/api/dsh-skills-manager",
     handler: async (req, res) => {
-      const u = new URL(req.url, "http://localhost");
+      const u = new URL(req.url!, "http://localhost");
       const path = u.pathname.replace(/\/+$/, "");
       const sessionId = req.headers["x-dsh-skills-session"];
       const projectOptions = () => ({ projectCwds: activeSessionCwds(ctx, sessionId) });
-      const requestRoot = async (key) => rootByKey[key] || (await projectRoots(projectOptions().projectCwds)).find((root) => root.key === key);
+      const requestRoot = async (key: string) => rootByKey[key] || (await projectRoots(projectOptions().projectCwds)).find((root) => root.key === key);
       const stateWithSources = async () => {
         const snapshot = await state(projectOptions());
         try {
           const sources = await repositories.sources();
           for (const root of snapshot.roots) if (root.key === "dsh") for (const skill of root.skills || []) skill.installSource = sources[skill.name] || null;
-        } catch (error) { snapshot.warnings.push({ code: "error.repo.state", error: error.message }); }
+        } catch (caught) { const error = caught as CodedError; snapshot.warnings.push({ code: "error.repo.state", error: error.message }); }
         return snapshot;
       };
       try {
@@ -482,8 +487,8 @@ function apply(ctx) {
               json(res, 404, { ok: false, code: "error.proto.unknownAction", error: `unknown action: ${path}` });
           }
         });
-      } catch (e) {
-        json(res, Number.isInteger(e && e.statusCode) ? e.statusCode : 500, {
+      } catch (caught) { const e = caught as CodedError;
+        json(res, Number.isInteger(e && e.statusCode) ? e.statusCode! : 500, {
           ok: false,
           ...(e && e.code ? { code: e.code } : {}),
           error: String(e && e.message ? e.message : e),
@@ -495,3 +500,6 @@ function apply(ctx) {
 }
 
 export { activeSessionCwds, apply, inject, name, notifyChatCatalog, registerAgentSkillProviders };
+
+/** 请求体由各业务入口现有校验解析，此类型只声明路由转交的字段。 */
+type RequestBody = CreateInput & UploadInput & SkillRequest & RepositoryInput & {root?: string; source?: string; conflict?: string; dryRun?: boolean};

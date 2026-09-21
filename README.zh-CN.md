@@ -142,7 +142,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 遇到问题或有建议，欢迎[提交 Issue](https://github.com/MichengAI/dsh-skills-manager/issues)。请附上 DSH 与插件版本、复现步骤；界面问题可附完整截图。
 
-源码位于 `src`，欢迎提交改进。
+源码位于 `src`，使用严格 TypeScript。开发时执行 `npm run typecheck` 检查类型，`npm run build` 生成运行产物，`npm run verify` 执行完整回归与打包验证。`lib` 不纳入 Git 提交；打包前会自动检查类型并构建，npm 安装包仍包含所需 JavaScript 产物。欢迎提交改进。
 
 ## 许可证
 

@@ -34,7 +34,7 @@ async function skill(path, name) {
   return file;
 }
 try {
-  const source = await readFile(new URL("../src/core.js", import.meta.url), "utf8");
+  const source = await readFile(new URL("../lib/core.js", import.meta.url), "utf8");
   const rankSources = new Function(source.slice(source.indexOf("const EXTERNAL_SOURCE_ORDER"), source.indexOf("const PROJECT_SOURCES")) + "; return rankSources;")();
   assert.throws(() => rankSources([{ key: "newcomer" }], 210), /newcomer/, "单个未知来源也必须明确报错");
   assert.throws(() => rankSources([{ key: "codex" }, { key: "newcomer" }], 210), /newcomer/, "未知来源不能静默成为最高优先级");
