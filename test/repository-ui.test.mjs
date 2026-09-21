@@ -12,6 +12,9 @@ let repos = [{ id: "one", owner: "example", name: "skills", skills: [{ path: "sk
 const calls = [];
 let finishInstall;
 let failInstall = false;
+let finishRefresh, finishDetail;
+let holdRefresh = false;
+let failRefresh = false;
 const api = async (path, options) => {
   const body = options?.body ? JSON.parse(options.body) : undefined;
   calls.push({ path, body });
@@ -21,7 +24,8 @@ const api = async (path, options) => {
     repos[0].skills[0].status = "installed";
   }
   if (path.endsWith("/add")) return { id: "two" };
-  if (path.endsWith("/refresh")) return { error: null };
+  if (path.endsWith("/refresh")) { if (holdRefresh) await new Promise(resolve => { finishRefresh = resolve; }); if (failRefresh) throw new Error("仓库网络失败"); return { error: null }; }
+  if (path.endsWith("/detail")) { await new Promise(resolve => { finishDetail = resolve; }); return { name: "pdf", body: "说明", commit: "abc", path: "skills/pdf" }; }
   if (path.endsWith("/preview")) return { token: "checked", commit: "a".repeat(40), localModified: true, changes: [{ kind: "modified", path: "SKILL.md" }] };
   if (path.endsWith("/update")) repos[0].skills[0].status = "installed";
   return { repositories: repos };
@@ -46,6 +50,28 @@ assert.equal(all().filter((n) => n.props.className === "dssm-repo-row").length, 
 assert.ok(find((n) => n.type === "button" && n.children.includes("repo.conflict")).props.disabled);
 find((n) => n.props["aria-label"] === "repo.search").props.onChange({ target: { value: "PDF" } }); render();
 assert.equal(all().filter((n) => n.props.className === "dssm-repo-row").length, 1);
+const listCalls = calls.filter(call => call.path === "/repositories").length;
+await click("repo.detail");
+assert.ok(find(n => n.type === "modal"), "详情应立即打开加载弹窗");
+assert.equal(ui.content.props["aria-busy"], false, "读取详情不切换背景列表忙碌状态");
+finishDetail(); await new Promise(setImmediate); render();
+assert.equal(calls.filter(call => call.path === "/repositories").length, listCalls, "只读详情不刷新背景列表");
+find(n => n.type === "modal").props.onClose(); render();
+holdRefresh = true;
+await click("repo.refresh");
+assert.ok(find(n => n.props.className === "dssm-repo-spinner"), "刷新过程中有动画图标");
+assert.ok(find(n => n.props.role === "status" && n.children.some(c => typeof c === "string" && c.includes("example/skills"))), "刷新显示当前仓库");
+finishRefresh(); await new Promise(setImmediate); render(); holdRefresh = false;
+assert.equal(find(n => n.props.className === "dssm-repo-spinner"), undefined, "完成后停止动画");
+await click("repo.manage");
+holdRefresh = true; failRefresh = true;
+const manageRefresh = nodes(find(n => n.type === "modal")).find(n => n.type === "button" && n.children.includes("repo.refresh"));
+manageRefresh.props.onClick(); await new Promise(setImmediate); render();
+assert.ok(nodes(find(n => n.type === "modal")).some(n => n.props.className === "dssm-repo-spinner"), "管理弹窗中的当前仓库也显示动画");
+finishRefresh(); await new Promise(setImmediate); render(); holdRefresh = false; failRefresh = false;
+assert.equal(find(n => n.props.className === "dssm-repo-spinner"), undefined, "失败后停止动画");
+assert.ok(find(n => n.children.includes("仓库网络失败")), "失败提示保留");
+find(n => n.type === "modal").props.onClose(); render();
 await click("repo.install");
 assert.ok(find((n) => n.type === "button" && n.children.includes("repo.installing"))?.props.disabled, "当前行应立即显示安装中并禁用");
 assert.ok(find((n) => n.props.className === "dssm-repo-main")?.children.some((n) => n.props?.role === "status"), "安装进度应显示在当前行");
