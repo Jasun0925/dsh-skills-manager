@@ -2,9 +2,9 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
-## Unreleased
+## 1.0.1 - 2026-09-21
 
-These changes follow the published 1.0.0 release and are not included in its npm package. The next release must use a new version number.
+This maintenance release improves source development, packaging verification and screenshot privacy while retaining the existing plugin runtime interfaces.
 
 ### Development and packaging
 
@@ -16,6 +16,11 @@ These changes follow the published 1.0.0 release and are not included in its npm
 ### Fixes
 
 - Restore modal focus after an asynchronous form submission disables the focused button, so Escape after an error closes only the plugin dialog instead of the entire host settings page.
+
+### Documentation and privacy
+
+- Crop all nine screenshots to their feature panels, redact local paths, and remove real filenames and project directories from the background. Reduce total screenshot size by 81% with lossless compression.
+- Correct the English screenshot caption and align image display sizes with the cropped files.
 
 ## 1.0.0 - 2026-09-21
 
