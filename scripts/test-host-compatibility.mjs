@@ -10,6 +10,7 @@ import {
   realpath,
   access,
   rm,
+  readdir,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
@@ -26,6 +27,7 @@ import assert from "node:assert/strict";
 import { supportedHosts as supported } from "./hosts.mjs";
 import { parseOptions, usage } from "./compatibility-options.mjs";
 import { resolveTempRoot, sameExistingPath } from "./compat-paths.mjs";
+import { pinHostDependencies } from "./compat-dependencies.mjs";
 let options;
 try {
   options = parseOptions(process.argv.slice(2));
@@ -219,8 +221,10 @@ try {
   // 旧版宿主的 peer 图会使 npm 11 长时间解析；使用项目规定的 pnpm，并统一官方版本。
   await writeFile(
     join(sandbox, "pnpm-workspace.yaml"),
-    `autoInstallPeers: true\nstrictPeerDependencies: false\noverrides:\n  '@deepseek-ai/dsh-*': '${version}'\n  '@deepseek-ai/cordis': '4.0.2'\n`,
+    `autoInstallPeers: true\nstrictPeerDependencies: false\noverrides:\n  '@deepseek-ai/cordis': '4.0.2'\n`,
   );
+  await writeFile(join(sandbox, ".pnpmfile.cjs"),
+    `const pinHostDependencies = ${pinHostDependencies.toString()};\nmodule.exports = { hooks: { readPackage: pkg => pinHostDependencies(pkg, ${JSON.stringify(version)}) } };\n`, "utf8");
   const installLog = await run([
     pnpm,
     "install",
@@ -237,7 +241,17 @@ try {
     );
     assert.equal(installed.version, expected, `${name} 不能由其他版本掩盖`);
   }
-  report.checks.push("精确版本的宿主与全部直接官方 peer 已安装");
+  for (const entry of await readdir(join(sandbox, "node_modules", ".pnpm"))) {
+    if (!entry.startsWith("@deepseek-ai+dsh")) continue;
+    const scope = join(sandbox, "node_modules", ".pnpm", entry, "node_modules", "@deepseek-ai");
+    // Windows 下虚拟存储目录会被截断并加哈希，不能从目录名反推包名。
+    for (const item of await readdir(scope, { withFileTypes: true })) {
+      if (!item.isDirectory() || !(item.name === "dsh" || item.name.startsWith("dsh-"))) continue;
+      const installed = JSON.parse(await readFile(join(scope, item.name, "package.json"), "utf8"));
+      assert.equal(installed.version, version, `${installed.name} 传递依赖不能混装其他宿主版本`);
+    }
+  }
+  report.checks.push("精确版本的宿主、全部官方 peer 与传递依赖已安装");
   const pack = JSON.parse(
     await run(
       [
