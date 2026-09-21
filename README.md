@@ -30,7 +30,7 @@ Bring skills from your computer and projects into DSH without switching between 
 - **Global and project skills**: the project tab follows the current session, with project copies taking priority over global copies.
 - **Reuse existing skills**: supports Codex, Claude Code, Copilot, and other agents without modifying their source files when toggled.
 - **Create and import**: create a skill or import ZIP archives, folders, and `SKILL.md` files into global DSH.
-- **Skill repositories**: discover public GitHub skills, install without overwriting local files, review updates and restore backups. [Repository guide](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/03-repository-guide.en.md).
+- **Skill repositories**: discover public GitHub skills, install without overwriting local files, review updates and restore backups.
 - **Recover deleted skills**: DSH skills go to Trash first, so accidental deletions can be restored.
 
 - **Source tracking and updates**: distinguish local and repository skills, preview file changes, protect local edits, and confirm backup, update or rollback.

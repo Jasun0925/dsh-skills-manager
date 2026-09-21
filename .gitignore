@@ -7,6 +7,6 @@ node_modules/
 .codegraph/
 .compat-results/
 
-# 公开产品文档入库；内部交接、过程记录和运行证据仅保留本机。
-docs/*
-!docs/02-产品与业务/
+# 项目文档仅保留本机，不纳入 Git。
+/docs/
+
