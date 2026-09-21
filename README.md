@@ -15,12 +15,11 @@
   [![npm downloads](https://img.shields.io/npm/dt/%40michengai%2Fdsh-skills-manager.svg?label=npm%20downloads)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
   [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-skills-manager)
   [![DSH supported through 0.1.6-alpha.2](https://img.shields.io/badge/DSH-up%20to%200.1.6--alpha.2-2563eb.svg)](#installation)
-  [![Node.js ^22.19.0 || >=24.0.0](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%20%3E%3D24-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
 </div>
 
 > DSH Skills Manager is a community-maintained DeepSeek Harness (DSH) plugin, not an official DeepSeek AI product.
 
-The next version is **1.0.0**, not yet published. Until publication, `@latest` installs the currently published npm version. See the [changelog](CHANGELOG.md) and [bilingual 1.0.0 release notes](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/04-1.0.0%E5%8F%91%E8%A1%8C%E8%AF%B4%E6%98%8E.md).
+This README describes **1.0.0**. See the [changelog](CHANGELOG.md) and [bilingual 1.0.0 release notes](https://github.com/MichengAI/dsh-skills-manager/blob/master/docs/02-%E4%BA%A7%E5%93%81%E4%B8%8E%E4%B8%9A%E5%8A%A1/04-1.0.0%E5%8F%91%E8%A1%8C%E8%AF%B4%E6%98%8E.md).
 
 ## Features
 

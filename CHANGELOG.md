@@ -2,8 +2,6 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
-1.0.0 is prepared for release.
-
 ## 1.0.0 - 2026-09-21
 
 ### 1.0 release scope
