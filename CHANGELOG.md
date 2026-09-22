@@ -6,7 +6,7 @@
 
 - Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions. Settings icons use the 0.1.7 weight-based exports when the host provides them, and the earlier size-suffixed exports on older hosts.
 - Use the host Switch, Button, Tag, segmented tabs, and modal when that host provides them. Older hosts get local copies of the missing switch, tag, and segmented tabs with the same appearance. Enabled switches use the success color. Escape in a dialog still closes only that dialog.
-- Keep fallback tabs in one row on older hosts, and open dialogs with focus on the panel rather than the close button.
+- Keep fallback tabs in one row on older hosts, and open dialogs with focus on the panel rather than the close button. Shift+Tab from that panel stays inside the dialog.
 
 ## 1.0.1 - 2026-09-21
 

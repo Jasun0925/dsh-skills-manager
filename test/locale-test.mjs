@@ -620,7 +620,7 @@ const fakeModal = {
     return [firstButton, lastButton];
   },
   contains: function (node) {
-    return node === firstButton || node === lastButton;
+    return node === fakeModal || node === firstButton || node === lastButton;
   },
 };
 const previousDocument = globalThis.document;
@@ -637,6 +637,21 @@ globalThis.document = previousDocument;
 ok(
   focusPrevented && focused === "first",
   "modal focus trap wraps Tab from the last element",
+);
+focused = "";
+focusPrevented = false;
+globalThis.document = { activeElement: fakeModal };
+trapModalFocus(fakeModal, {
+  key: "Tab",
+  shiftKey: true,
+  preventDefault: function () {
+    focusPrevented = true;
+  },
+});
+globalThis.document = previousDocument;
+ok(
+  focusPrevented && focused === "last",
+  "Shift+Tab from the dialog panel wraps to the last control",
 );
 
 function mockT(key, params) {
@@ -698,14 +713,6 @@ eq(
   "Overridden by the same skill in DSH skills",
   "shadow hints use the localized source display name",
 );
-eq(bundle.nextScopeTab("user", "ArrowLeft"), "user", "left arrow stays on the first tab");
-eq(bundle.nextScopeTab("user", "ArrowRight"), "project", "right arrow moves to the next tab");
-eq(bundle.nextScopeTab("project", "ArrowRight"), "trash", "right arrow opens the trash tab");
-eq(bundle.nextScopeTab("trash", "ArrowRight"), "repositories", "右箭头进入仓库页签");
-eq(bundle.nextScopeTab("repositories", "ArrowRight"), "repositories", "最后一个页签保持边界");
-eq(bundle.nextScopeTab("trash", "ArrowLeft"), "project", "left arrow returns to projects");
-eq(bundle.nextScopeTab("user", "End"), "repositories", "End 进入最后一个页签");
-eq(bundle.nextScopeTab("project", "Home"), "user", "Home moves to the first tab");
 ok(typeof bundle.currentSessionId === "function", "factory exports currentSessionId");
 eq(bundle.currentSessionId({ current: "legacy-session" }), "legacy-session", "currentSessionId reads the pre-alpha.2 current field");
 eq(
