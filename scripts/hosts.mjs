@@ -6,7 +6,6 @@ export const developmentHost = "0.1.7-alpha.1";
 
 export const requiredHostPeers = Object.freeze([
   "@deepseek-ai/dsh-client-locale",
-  "@deepseek-ai/dsh-client-ui-primitives",
   "@deepseek-ai/dsh-client-ui-slots",
   "@deepseek-ai/dsh-host-webserver",
   "@deepseek-ai/dsh-session",

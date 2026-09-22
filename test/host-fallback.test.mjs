@@ -9,5 +9,8 @@ assert.equal(built.includes("dssm-fallback-tabs"), false);
 assert.equal(built.includes("dssm-fallback-switch"), false);
 assert.equal(built.includes("dssm-host-modal{"), false);
 assert.ok(built.includes("data-ds-dark-theme"));
+assert.ok(built.includes('require("react")'));
+assert.ok(built.includes('require("react-dom")'));
+assert.ok(built.includes('require("react-dom/client")'));
 assert.ok(source.includes("block: true"));
 console.log("设置页不再保留宿主控件兜底");

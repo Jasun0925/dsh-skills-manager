@@ -5,7 +5,7 @@
 ## Unreleased
 
 - Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions.
-- Replace settings controls with Ant Design. Buttons, inputs, selects, tabs, switches, tags, and dialogs follow its default blue theme and the host light or dark scheme. The settings client is minified, and it uses the host’s single copy of React and React DOM.
+- Replace settings controls with Ant Design. Buttons, inputs, selects, tabs, switches, tags, and dialogs follow its default blue theme and the host light or dark scheme. The settings client is minified, and it uses the host’s single copy of React and React DOM. The unused host primitives peer is dropped.
 - Use Ant Design’s default-size round buttons for page actions. The GitHub, feedback, and update actions stay small and rectangular, and keep their icons. The update dialog is an Ant Design modal at its default position: the status sits on the latest-version row, and the manual command wraps instead of scrolling sideways. Escape closes only that dialog.
 - Keep the source and status menus at the width of their labels, and place search on the same row at the right. Escape closes an open filter or action menu and does not close the host settings page.
 - Render each skill source as an Ant Design Collapse and the skills inside it as a List. The skill description appears when hovering the name. The skill detail dialog matches the repository detail: the name, a description paragraph, the source path, and one read-only body.

@@ -1,5 +1,4 @@
 import type * as React from 'react';
-import type * as Primitives from '@deepseek-ai/dsh-client-ui-primitives';
 import type { createRepositoryManager } from './repositories.js';
 import type { state, skillDetail, createSkill, listTrash } from './core.js';
 import type { ImportResult } from './types.js';
@@ -97,7 +96,9 @@ export interface ClientContext {
 }
 interface Require {
     (id: 'react'): typeof React;
-    (id: '@deepseek-ai/dsh-client-ui-primitives'): typeof Primitives;
+    (id: 'react-dom'): unknown;
+    (id: 'react-dom/client'): unknown;
+    (id: 'react/jsx-runtime'): unknown;
 }
 declare global {
     interface Window {

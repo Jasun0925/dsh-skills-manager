@@ -1,6 +1,7 @@
 import type * as React from "react";
 import type { SourceSelectProps } from "./client-types.js";
 import { Button, Dropdown, Select } from "./antd-ui.js";
+import { handleSourceMenuEscape } from "./source-select-model.js";
 
 /** 筛选用 Ant Design Select，操作菜单用 Dropdown。宽度跟选项走，不铺满整行。打开时在 window 捕获阶段吃掉 Escape，避免关掉宿主设置页。 */
 export function createSourceSelect(react: typeof React) {
@@ -12,11 +13,7 @@ export function createSourceSelect(react: typeof React) {
     react.useEffect(function () {
       if (!open || typeof window === "undefined") return undefined;
       function onKey(event: KeyboardEvent) {
-        if (event.key !== "Escape") return;
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        setOpen(false);
+        handleSourceMenuEscape(event, function () { setOpen(false); });
       }
       window.addEventListener("keydown", onKey, true);
       return function () { window.removeEventListener("keydown", onKey, true); };

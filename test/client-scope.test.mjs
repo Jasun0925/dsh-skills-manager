@@ -48,23 +48,11 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (_, options) => ({ ok: true, json: async () => ({ data: sessionData(options) }) });
 try {
   new Function("window", await readFile(new URL("../lib/client.js", import.meta.url), "utf8"))({ __ModuleLoader__: { load(value) { definition = value; } } });
-  const primitives = {
-    Switch(props) { return { type: "button", props: { role: "switch", "aria-checked": props.checked, "aria-label": props.label, disabled: props.disabled, onClick: () => props.onChange() }, children: [] }; },
-    Button(props) { return { type: "button", props, children: [].concat(props.children || []).flat() }; },
-    Tag(props) { return { type: "span", props, children: [].concat(props.children || []).flat() }; },
-    Input(props) { return { type: "input", props, children: [] }; },
-    Menu(props) { return { type: "menu", props, children: [].concat(props.children || []).flat() }; },
-    Modal(props) { return props.open === false ? null : { type: "div", props: { role: "dialog" }, children: [].concat(props.children || []).flat() }; },
-    SegmentedTabs(props) {
-      const labels = (label) => typeof label === "string" ? [label] : Array.isArray(label) ? label : [];
-      return { type: "div", props: { role: "tablist", "aria-label": props.label }, children: props.items.map((item) => ({ type: "button", props: { role: "tab", id: item.id, onClick: () => props.onChange(item.value) }, children: labels(item.label) })) };
-    },
-  };
   const client = definition.factory((id) => {
     if (id === "react") return react;
     if (id === "react/jsx-runtime") return { jsx: react.createElement, jsxs: react.createElement, Fragment: react.Fragment };
     if (id.startsWith("react-dom")) return { createPortal: (node) => node };
-    return primitives;
+    throw new Error("unexpected require: " + id);
   });
   client.apply({ effect() {}, slots: { inject(name, fn) { fn(); }, register(options, fn) { component = fn; } } });
   const t = (key, params = {}) => (client.DICT.zh[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? "{" + name + "}"));

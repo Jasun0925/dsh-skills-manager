@@ -79,14 +79,6 @@ const bundle = loaded.factory((id) => {
   if (id === "react") return react;
   if (id === "react/jsx-runtime") return { jsx: react.createElement, jsxs: react.createElement, Fragment: react.Fragment };
   if (id.startsWith("react-dom")) return reactDom;
-  if (id === "@deepseek-ai/dsh-client-ui-primitives")
-    return {
-      IconListPenOutline16: function () {},
-      IconRefreshOutline16: function () {},
-      IconDownloadOutline16: function () {},
-      IconCopyOutline16: function () {},
-      IconCloseOutline16: function () {},
-    };
   throw new Error("unexpected require: " + id);
 });
 

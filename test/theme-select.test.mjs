@@ -1,13 +1,28 @@
 // 筛选下拉和操作菜单走 Ant Design，不再自绘触发器。
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { handleSourceMenuEscape } from "../src/source-select-model.ts";
 
 const selectSource = await readFile(new URL("../src/source-select.ts", import.meta.url), "utf8");
 assert.ok(selectSource.includes("popupMatchSelectWidth: false"), "筛选下拉按内容展开，不跟触发器等宽");
 assert.ok(selectSource.includes("danger: option.danger"), "操作菜单保留危险标记");
-assert.ok(selectSource.includes('window.addEventListener("keydown", onKey, true)'), "打开的筛选或操作菜单在捕获阶段接收 Escape");
-assert.ok(selectSource.includes("stopImmediatePropagation"), "菜单 Escape 不再传到宿主设置页");
+assert.ok(selectSource.includes("handleSourceMenuEscape"), "打开的筛选或操作菜单把 Escape 交给独立处理函数");
 assert.ok(!selectSource.includes("dsh-client-ui-primitives"), "下拉不再使用宿主菜单");
+
+const escapeCalls = [];
+assert.equal(handleSourceMenuEscape({
+  key: "Escape",
+  preventDefault: () => escapeCalls.push("prevent"),
+  stopPropagation: () => escapeCalls.push("stop"),
+  stopImmediatePropagation: () => escapeCalls.push("stopImmediate"),
+}, () => escapeCalls.push("close")), true, "Escape 关闭打开的菜单");
+assert.deepEqual(escapeCalls, ["prevent", "stop", "stopImmediate", "close"], "菜单 Escape 不再传到宿主设置页");
+assert.equal(handleSourceMenuEscape({
+  key: "Tab",
+  preventDefault: () => escapeCalls.push("prevent"),
+  stopPropagation: () => escapeCalls.push("stop"),
+  stopImmediatePropagation: () => escapeCalls.push("stopImmediate"),
+}, () => escapeCalls.push("close")), false, "其它按键不关闭菜单");
 
 const source = await readFile(new URL("../src/client.ts", import.meta.url), "utf8");
 assert.ok(source.includes('className: "dssm-search"'), "搜索框使用 Ant Design 输入框");
