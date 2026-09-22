@@ -75,7 +75,10 @@ try {
     const header = nodes(tree).find((node) => node.props["aria-expanded"] === false);
     if (header) { header.props.onClick(); tree = render(); }
     const rendered = nodes(tree);
-    assert.ok(rendered.some((node) => node.props.role === "tablist" || node.type === primitives.SegmentedTabs), `${name} 设置页要有页签`);
+    const tablist = rendered.find((node) => node.props.role === "tablist");
+    assert.ok(tablist, `${name} 设置页要有页签`);
+    assert.equal(tablist.props.style?.gridTemplateColumns, "repeat(4, minmax(0, 1fr))", `${name} 页签要排成一行`);
+    assert.match(String(tablist.props.className), /dssm-scope-tabs/, `${name} 页签要保留范围 class`);
     assert.ok(rendered.some((node) => node.props.role === "switch" || node.type === primitives.Switch), `${name} 设置页要有开关`);
     assert.ok(rendered.some((node) => node.props.className === "dssm-fallback-tag" || node.props.tone === "outline"), `${name} 设置页要有只读标签`);
   }

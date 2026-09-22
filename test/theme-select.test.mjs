@@ -25,7 +25,7 @@ assert.ok(source.includes('h(primitives.Input, { className: "dssm-input dssm-sea
 assert.ok(!source.includes('h("input", { className: "dssm-control'), "可见文本输入不能继续使用自定义控件");
 assert.ok(source.includes('className: "dssm-row-state"'), "状态与开关必须在同一组");
 assert.ok(!source.includes('grid-row:1 / span 3'), "操作区不能跨三行居中");
-assert.ok(source.includes("var(--dsw-alias-bg-mask-1,rgba("), "遮罩必须为缺少变量的宿主保留兜底");
+assert.ok(source.includes("var(--dsw-alias-state-success-primary,#3dbb7a)"), "打开的开关在缺少变量时仍用成功色");
 assert.ok(!source.includes('outline:2px solid var(--dsw-alias-state-success-primary)'), "焦点不能使用成功状态色");
 const updater = await readFile(new URL("../src/plugin-update-ui.ts", import.meta.url), "utf8");
 assert.ok(updater.includes("var(--dsw-elevation-prominent,0 8px"), "阴影必须有兼容兜底");

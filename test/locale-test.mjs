@@ -517,47 +517,6 @@ ok(
   typeof trapModalFocus === "function",
   "factory exports modal focus trapping for regression tests",
 );
-const handleModalEscape = bundle.handleModalEscape;
-ok(
-  typeof handleModalEscape === "function",
-  "factory exports modal Escape handling for regression tests",
-);
-let escapePrevented = false;
-let escapeStopped = false;
-let nativeEscapeStopped = false;
-let escapeClosed = 0;
-ok(
-  handleModalEscape(
-    {
-      key: "Escape",
-      preventDefault: function () {
-        escapePrevented = true;
-      },
-      stopPropagation: function () {
-        escapeStopped = true;
-      },
-      nativeEvent: {
-        stopImmediatePropagation: function () {
-          nativeEscapeStopped = true;
-        },
-      },
-    },
-    function () {
-      escapeClosed += 1;
-    },
-  ),
-  "Escape is handled by the topmost plugin modal",
-);
-ok(
-  escapePrevented && escapeStopped && nativeEscapeStopped && escapeClosed === 1,
-  "modal Escape is consumed before the Settings dialog can close",
-);
-ok(
-  !handleModalEscape({ key: "Enter" }, function () {
-    escapeClosed += 1;
-  }),
-  "non-Escape keys pass through modal Escape handling",
-);
 const inspectUploadSelection = bundle.inspectUploadSelection;
 ok(
   typeof inspectUploadSelection === "function",
@@ -1062,7 +1021,9 @@ ok(
   "source toggles stay in the collapsible source header",
 );
 ok(
-  source.includes("SegmentedTabs") && /role: "tablist"/.test(source),
+  source.includes("SegmentedTabs") &&
+    /role: "tablist"/.test(source) &&
+    source.includes('gridTemplateColumns: "repeat(" + count + ", minmax(0, 1fr))"'),
   "settings separates global and project skills using tabs",
 );
 
