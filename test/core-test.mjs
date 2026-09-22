@@ -319,18 +319,16 @@ ok(
 );
 ok(
   clientSource.includes(
-    'className: "dssm-modal" + (props.wide ? " dssm-modal-wide" : "") + (props.className ? " " + props.className : "")',
+    'className: "dssm-host-modal" + (props.wide ? " dssm-host-modal-wide" : "") + (props.className ? " " + props.className : "")',
   ),
   "dialogs use the shared adaptive modal component",
 );
 ok(
-  clientSource.includes(
-    ".dssm-modal{box-sizing:border-box;display:flex;width:min(560px,100%)!important;",
-  ),
+  clientSource.includes(".dssm-host-modal{width:min(560px,100%)}"),
   "all plugin dialogs stay compact against host stretch",
 );
 ok(
-  clientSource.includes(".dssm-modal-wide{width:min(720px,100%)!important}"),
+  clientSource.includes(".dssm-host-modal-wide{width:min(720px,100%)}"),
   "detail dialog has a bounded wider layout",
 );
 ok(

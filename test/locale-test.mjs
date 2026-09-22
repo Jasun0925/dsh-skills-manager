@@ -1062,7 +1062,7 @@ ok(
   "source toggles stay in the collapsible source header",
 );
 ok(
-  source.includes("SegmentedTabs"),
+  source.includes("SegmentedTabs") && /role: "tablist"/.test(source),
   "settings separates global and project skills using tabs",
 );
 
