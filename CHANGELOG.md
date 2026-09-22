@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.1.0 - 2026-09-23
+
 - Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions.
 - Replace settings controls with Ant Design. Buttons, inputs, selects, tabs, switches, tags, and dialogs follow its default blue theme and the host light or dark scheme. The settings client is minified, and it uses the host’s single copy of React and React DOM. The unused host primitives peer is dropped.
 - Use Ant Design’s default-size round buttons for page actions. The GitHub, feedback, and update actions stay small and rectangular, and keep their icons. The update dialog is an Ant Design modal at its default position: the status sits on the latest-version row, and the manual command wraps instead of scrolling sideways. Escape closes only that dialog.
