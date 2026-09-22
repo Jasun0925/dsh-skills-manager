@@ -318,18 +318,8 @@ ok(
   "client sends the mutation request marker",
 );
 ok(
-  clientSource.includes(
-    'className: "dssm-host-modal" + (props.wide ? " dssm-host-modal-wide" : "") + (props.className ? " " + props.className : "")',
-  ),
-  "dialogs use the shared adaptive modal component",
-);
-ok(
-  clientSource.includes(".dssm-host-modal{width:min(560px,100%)}"),
-  "all plugin dialogs stay compact against host stretch",
-);
-ok(
-  clientSource.includes(".dssm-host-modal-wide{width:min(720px,100%)}"),
-  "detail dialog has a bounded wider layout",
+  clientSource.includes("width: props.wide ? 720 : props.className === \"dssm-modal-import\" ? 480 : 560"),
+  "dialogs use Ant Design modal widths",
 );
 ok(
   clientSource.includes(
@@ -341,12 +331,14 @@ ok(
   clientSource.includes('placeholder: t("search.placeholder")'),
   "settings panel registers a skill search input",
 );
+const filterRow = clientSource.slice(clientSource.indexOf('className: "dssm-filters"'));
 ok(
-  clientSource.includes('className: "dssm-input dssm-search"'),
-  "search field follows the source-first filter layout",
+  filterRow.indexOf('className: "dssm-source-filter"') < filterRow.indexOf('className: "dssm-status-filter"') &&
+    filterRow.indexOf('className: "dssm-status-filter"') < filterRow.indexOf('className: "dssm-search"'),
+  "search sits on the same row after the compact source and status menus",
 );
 ok(
-  clientSource.includes('role: "tablist"') &&
+  clientSource.includes("block: true") &&
     clientSource.includes('className: "dssm-sources"'),
   "settings panel separates scopes and renders a skill list",
 );
@@ -364,8 +356,8 @@ ok(
   "category filter exposes an accessible label",
 );
 ok(
-  clientSource.includes("primitives.Menu"),
-  "筛选菜单委托官方组件处理键盘导航",
+  clientSource.includes("popupMatchSelectWidth"),
+  "筛选下拉使用 Ant Design Select",
 );
 const packageJson = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -1353,6 +1345,10 @@ eq(
   createdDetail.body,
   "Follow the user request carefully.",
   "skillDetail returns the markdown body",
+);
+ok(
+  createdDetail.document.includes("name: conversation-helper") && createdDetail.document.includes("Follow the user request carefully."),
+  "skillDetail returns the SKILL.md source",
 );
 ok(
   createdDetail.loadable === true && createdDetail.diagnostics.length === 0,

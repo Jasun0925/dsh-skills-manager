@@ -1,34 +1,19 @@
-// 验证下拉委托官方菜单及键盘打开、选择和关闭的受控行为。
+// 筛选下拉和操作菜单走 Ant Design，不再自绘触发器。
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createSourceSelect } from "../src/source-select.ts";
-let open = false, value = "a";
-const react = { createElement: (type, props, ...children) => ({ type, props, children }), useState: () => [open, next => { open = next; }], useRef: () => ({ current: null }), useEffect() {} };
-const Menu = Symbol("官方菜单");
-const Button = (props) => react.createElement("button", props, props.children);
-const Select = createSourceSelect(react, { Menu, Button });
-const render = () => Select({ label: "来源", value, options: [{ value: "a", label: "本机" }, { value: "b", label: "仓库" }], onChange: next => { value = next; } });
-let tree = render();
-assert.equal(tree.type, Menu);
-assert.equal(tree.props.portal, true);
-tree.props.anchor.props.onKeyDown({ key: "ArrowDown", preventDefault() {} });
-tree = render(); assert.equal(tree.props.open, true);
-tree.props.onSelect("b"); assert.equal(value, "b"); assert.equal(open, false);
-tree = render(); assert.equal(tree.props.selectedId, "b");
-tree.props.anchor.props.onClick(); tree = render(); tree.props.onClose(); assert.equal(open, false);
-const actions = Select({ label: "更多", action: true, options: [{ value: "trash", label: "移到回收站", danger: true }], onChange: next => { value = next; } });
-assert.equal(actions.props.items[0].danger, true, "回收操作保留危险操作标记");
-assert.equal(actions.props.align, "end", "操作菜单靠右对齐");
-assert.equal(actions.props.selectedId, undefined, "操作菜单不显示选中状态");
-const source = await readFile(new URL("../src/client.ts", import.meta.url), "utf8");
-assert.ok(source.includes('h(primitives.Input, { className: "dssm-input dssm-search"'), "技能搜索必须使用官方输入框且不覆盖官方外观");
-assert.ok(!source.includes('h("input", { className: "dssm-control'), "可见文本输入不能继续使用自定义控件");
-assert.ok(source.includes('className: "dssm-row-state"'), "状态与开关必须在同一组");
-assert.ok(!source.includes('grid-row:1 / span 3'), "操作区不能跨三行居中");
-assert.ok(source.includes("var(--dsw-alias-state-success-primary,#3dbb7a)"), "打开的开关在缺少变量时仍用成功色");
-assert.ok(!source.includes('outline:2px solid var(--dsw-alias-state-success-primary)'), "焦点不能使用成功状态色");
-const updater = await readFile(new URL("../src/plugin-update-ui.ts", import.meta.url), "utf8");
-assert.ok(updater.includes("var(--dsw-elevation-prominent,0 8px"), "阴影必须有兼容兜底");
-console.log("官方菜单交互与颜色变量检查通过");
 
-for (const token of ['brand-primary', 'bg-layer-3', 'label-primary-foreground']) assert.ok(source.includes('var(--dsw-alias-' + token + ','), '关键颜色保留宿主优先及兜底：' + token);
+const selectSource = await readFile(new URL("../src/source-select.ts", import.meta.url), "utf8");
+assert.ok(selectSource.includes("popupMatchSelectWidth: false"), "筛选下拉按内容展开，不跟触发器等宽");
+assert.ok(selectSource.includes("danger: option.danger"), "操作菜单保留危险标记");
+assert.ok(!selectSource.includes("dsh-client-ui-primitives"), "下拉不再使用宿主菜单");
+
+const source = await readFile(new URL("../src/client.ts", import.meta.url), "utf8");
+assert.ok(source.includes('className: "dssm-search"'), "搜索框使用 Ant Design 输入框");
+assert.ok(!source.includes('h("input", { className: "dssm-control'), "可见文本输入不能继续使用自定义控件");
+assert.ok(!source.includes("dssm-fallback-switch"), "开关不再保留自绘兜底");
+assert.ok(!source.includes("dssm-host-modal"), "弹窗不再套一层自绘外壳");
+assert.ok(source.includes('className: "dssm-row-state"'), "状态与开关必须在同一组");
+assert.ok(!source.includes("dsh-client-ui-primitives"), "设置页不再依赖宿主界面组件");
+const updater = await readFile(new URL("../src/plugin-update-ui.ts", import.meta.url), "utf8");
+assert.ok(updater.includes("handlePluginUpdateEscape"), "更新弹窗仍拦截 Escape");
+console.log("Ant Design 筛选与残留样式检查通过");

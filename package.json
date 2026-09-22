@@ -40,7 +40,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "npm run typecheck && npm run build && node test/build-test.mjs && node test/repositories.test.mjs && node test/repository-ui.test.mjs && node test/theme-select.test.mjs && node test/host-icons.test.mjs && node test/host-fallback.test.mjs && node test/repository-routes.test.mjs && node test/core-test.mjs && node test/readonly-discovery.test.mjs && node test/project-sources.test.mjs && node test/locale-test.mjs && node --test test/plugin-updater.test.mjs && node test/plugin-update-locale.test.mjs && node test/client-scope.test.mjs && node test/compatibility-options-test.mjs",
+    "test": "npm run typecheck && npm run build && node test/build-test.mjs && node test/repositories.test.mjs && node test/repository-ui.test.mjs && node test/theme-select.test.mjs && node test/host-fallback.test.mjs && node test/repository-routes.test.mjs && node test/core-test.mjs && node test/readonly-discovery.test.mjs && node test/project-sources.test.mjs && node test/locale-test.mjs && node --test test/plugin-updater.test.mjs && node test/plugin-update-locale.test.mjs && node test/client-scope.test.mjs && node test/compatibility-options-test.mjs",
     "verify": "node scripts/sync-hosts.mjs && npm test && npm run pack:check && node test/pack-test.mjs",
     "pack:check": "npm pack --dry-run --json",
     "prepack": "npm run typecheck && npm run build",
@@ -77,7 +77,11 @@
     "@deepseek-ai/dsh-web-app": "0.1.7-alpha.1",
     "@types/node": "22.20.4",
     "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "antd": "6.6.5",
     "esbuild": "0.25.0",
+    "react": "^18.3.1",
+    "react-dom": "18.3.1",
     "typescript": "5.9.3"
   },
   "engines": {

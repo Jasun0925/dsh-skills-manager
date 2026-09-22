@@ -36,9 +36,15 @@ try {
     entryPoints: ["src/client.ts"],
     outfile: join(stagingDirectory, "client.js"),
     bundle: true,
-    format: "iife",
+    format: "cjs",
     platform: "browser",
     target: "es2022",
+    external: ["react", "react-dom", "react/jsx-runtime", "react-dom/client"],
+    define: { "process.env.NODE_ENV": "\"production\"" },
+    banner: {
+      js: "window.__ModuleLoader__.load({ id: \"@michengai/dsh-skills-manager\", factory: (require) => {\nvar module = { exports: {} };\nvar exports = module.exports;",
+    },
+    footer: { js: "return module.exports;\n} });" },
   });
 
   if (process.env.DSH_SKILLS_MANAGER_TEST_FAIL_BEFORE_PUBLISH === "1") {

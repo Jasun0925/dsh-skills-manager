@@ -13,6 +13,21 @@ const react = {
   useEffect(effect) { const index = cursor++; if (!(index in state)) { state[index] = true; effects.push(effect); } },
   // 此测试不挂载 DOM；焦点恢复另由焦点单测与真实浏览器验证。
   useLayoutEffect() { cursor++; },
+  forwardRef(render) { return render; },
+  createContext() { return { Provider() {}, Consumer() {} }; },
+  useMemo(fn) { return fn(); },
+  useCallback(fn) { return fn; },
+  useContext() { return {}; },
+  useId() { return "id"; },
+  memo(component) { return component; },
+  Fragment: Symbol.for("react.fragment"),
+  version: "18.3.1",
+  Children: { map(children, fn) { return [].concat(children ?? []).filter((child) => child != null).map(fn); }, forEach() {}, count: () => 0, toArray: (children) => [].concat(children ?? []), only: (child) => child },
+  isValidElement: (value) => !!value && typeof value === "object",
+  cloneElement: (element) => element,
+  createRef: () => ({ current: null }),
+  Component: class { constructor(props) { this.props = props; } },
+  PureComponent: class { constructor(props) { this.props = props; } },
 };
 const skill = (name) => ({ name, description: "LONG_DESCRIPTION_" + name, enabled: true, loadable: true });
 const data = {
@@ -45,7 +60,12 @@ try {
       return { type: "div", props: { role: "tablist", "aria-label": props.label }, children: props.items.map((item) => ({ type: "button", props: { role: "tab", id: item.id, onClick: () => props.onChange(item.value) }, children: labels(item.label) })) };
     },
   };
-  const client = definition.factory((id) => id === "react" ? react : primitives);
+  const client = definition.factory((id) => {
+    if (id === "react") return react;
+    if (id === "react/jsx-runtime") return { jsx: react.createElement, jsxs: react.createElement, Fragment: react.Fragment };
+    if (id.startsWith("react-dom")) return { createPortal: (node) => node };
+    return primitives;
+  });
   client.apply({ effect() {}, slots: { inject(name, fn) { fn(); }, register(options, fn) { component = fn; } } });
   const t = (key, params = {}) => (client.DICT.zh[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? "{" + name + "}"));
   let tree;
@@ -62,21 +82,36 @@ try {
     effects.splice(0).forEach((effect) => effect());
     await new Promise((resolve) => setImmediate(resolve)); render();
   }
+  function linkedNodes(value, out = []) {
+    if (value == null || typeof value === "boolean" || typeof value === "string" || typeof value === "number") return out;
+    if (Array.isArray(value)) { value.forEach((item) => linkedNodes(item, out)); return out; }
+    out.push(value);
+    return out;
+  }
   function nodes(node = tree) {
-    if (!node || typeof node !== "object") return [];
+    if (!node || typeof node !== "object" || Array.isArray(node)) return [];
     // 筛选业务测试只驱动受控值；官方菜单交互由专用测试与真实浏览器验证。
-    if (node.type?.name === "SourceSelect") return [{ type: "select-fixture", props: { "aria-label": node.props.label, options: node.props.options, onChange: event => node.props.onChange(event.target.value) }, children: [] }];
-    if (typeof node.type === "function") return nodes(node.type({ ...node.props, children: node.children }));
-    return [node, ...node.children.flatMap((child) => nodes(child))];
+    if (typeof node.type === "function" && Array.isArray(node.props?.options) && node.props.label && node.props.onChange) return [{ type: "select-fixture", props: { "aria-label": node.props.label, options: node.props.options, onChange: (event) => node.props.onChange(event?.target ? event.target.value : event) }, children: [] }];
+    if (node.type?.name === "SkillSwitch" || node.props?.closeLabel) return nodes(node.type({ ...node.props, children: node.children }));
+    const nested = linkedNodes(node.children);
+    if (typeof node.type === "function") {
+      linkedNodes(node.props?.header, nested);
+      linkedNodes(node.props?.extra, nested);
+      linkedNodes(node.props?.actions, nested);
+      linkedNodes(node.props?.title, nested);
+      linkedNodes(node.props?.description, nested);
+      if (Array.isArray(node.props?.items)) node.props.items.forEach((item) => { linkedNodes(item?.label, nested); linkedNodes(item?.extra, nested); linkedNodes(item?.children, nested); });
+    }
+    return [node, ...nested.flatMap((child) => nodes(child))];
   }
   const find = (predicate) => nodes().find(predicate);
   const rows = () => nodes().filter((node) => node.props.className === "dssm-name").map((node) => node.children[0]);
   const change = (label, value) => { find((node) => node.props["aria-label"] === label).props.onChange({ target: { value } }); render(); };
-  const tab = (name) => { find((node) => node.props.role === "tab" && node.children.includes(name)).props.onClick(); render(); };
+  const tab = (name) => { const tabs = find((node) => node.props?.block === true && Array.isArray(node.props.options)); const option = tabs.props.options.find((item) => item.label === name || (Array.isArray(item.label) && item.label.includes(name))); tabs.props.onChange(option.value); render(); };
   render(); effects.splice(0).forEach((effect) => effect());
   await new Promise((resolve) => setImmediate(resolve)); render();
-  const groups = () => nodes().filter((node) => node.props.className === "dssm-source-head-main");
-  const expandAll = () => { groups().filter((node) => !node.props["aria-expanded"]).forEach((node) => node.props.onClick()); render(); };
+  const groups = () => nodes().filter((node) => node.props.className === "dssm-source" && Array.isArray(node.props.items));
+  const expandAll = () => { groups().filter((node) => ![].concat(node.props.activeKey || []).includes(node.props.items[0].key)).forEach((node) => node.props.onChange([node.props.items[0].key])); render(); };
   assert.deepEqual(rows(), [], "来源默认折叠，不平铺所有技能");
   assert.equal(groups().length, 2, "全局按来源分组");
   assert.ok(nodes(groups()[0]).some((node) => node.children.includes("1 个技能")), "来源数量使用翻译文案");
@@ -84,14 +119,18 @@ try {
   assert.deepEqual(rows(), ["global-one", "global-two"]);
   const states = nodes().filter((node) => node.props.className === "dssm-row-state");
   assert.equal(states.length, 2, "每条技能都有独立状态操作组");
-  assert.ok(nodes(states[0]).some((node) => node.props.role === "switch"), "开关和状态位于同一组");
+  assert.ok(nodes(states[0]).some((node) => String(node.props["aria-label"] || "").includes(t("skill.toggle"))), "开关和状态位于同一组");
+  const skillActions = nodes().filter((node) => node.props.className === "dssm-skill-actions");
+  assert.equal(skillActions.length, 2, "每条技能的操作在同一组");
+  assert.ok(skillActions.every((node) => node.children.at(-1)?.props?.className === "dssm-row-state"), "技能开关在行的最右边");
+  assert.equal(nodes().some((node) => node.props.className === "dssm-status dssm-enabled"), false, "启用状态由开关表示，不再重复文案");
   const more = find((node) => node.props["aria-label"] === t("btn.more"));
   assert.ok(more.props.options.some((option) => option.value === "trash" && option.danger), "可写技能的更多菜单提供回收入口");
   more.props.onChange({ target: { value: "trash" } }); render();
-  assert.ok(find((node) => node.props.role === "dialog"), "回收菜单仍先打开确认弹窗");
-  find((node) => node.type === "button" && node.children.includes(t("btn.cancel"))).props.onClick(); render();
-  assert.ok(!JSON.stringify(nodes()).includes("LONG_DESCRIPTION_global-one"), "展开来源后仍不显示长描述");
-  groups()[0].props.onClick(); render();
+  assert.ok(find((node) => node.props.title === t("confirm.trash.title")), "回收菜单仍先打开确认弹窗");
+  find((node) => node.children.includes(t("btn.cancel"))).props.onClick(); render();
+  assert.ok(JSON.stringify(nodes()).includes("LONG_DESCRIPTION_global-one"), "展开来源后显示技能简介");
+  groups()[0].props.onChange([]); render();
   assert.deepEqual(rows(), ["global-two"], "来源可独立折叠");
   change(t("search"), "two");
   assert.deepEqual(rows(), ["global-two"]);
@@ -103,12 +142,12 @@ try {
   assert.deepEqual(rows(), ["project-a"]);
   change(t("filter.source"), "a-copilot");
   assert.ok(
-    find((node) => node.props.role === "switch" && String(node.props["aria-label"] || "").includes(t("source.toggle"))),
+    find((node) => String(node.props["aria-label"] || "").includes(t("source.toggle"))),
     "项目 Tab 选中只读来源时显示来源开关",
   );
   change(t("filter.source"), "a-dsh");
   assert.equal(
-    find((node) => node.props.role === "switch" && String(node.props["aria-label"] || "").includes(t("source.toggle"))),
+    find((node) => String(node.props["aria-label"] || "").includes(t("source.toggle"))),
     undefined,
     "项目 DSH 不显示来源总开关",
   );
@@ -128,14 +167,14 @@ try {
   const projectCopy = data.roots.find((r) => r.key === "a-copilot").skills[0];
   projectCopy.shadowedBy = { root: "a-dsh", name: "project-a" };
   render();
-  const shadowedSwitch = find((node) => node.props.role === "switch" && node.props["aria-label"] === t("skill.toggle") + " project-a");
+  const shadowedSwitch = find((node) => node.props["aria-label"] === t("skill.toggle") + " project-a");
   assert.equal(shadowedSwitch.props.disabled, false, "被覆盖副本仍允许独立设置启停");
   let toggleRequest;
   globalThis.fetch = async (url, options) => {
     if (options?.method === "POST") toggleRequest = { url, body: JSON.parse(options.body) };
     return { ok: true, json: async () => ({ data: sessionData(options) }) };
   };
-  shadowedSwitch.props.onClick();
+  shadowedSwitch.props.onChange();
   await new Promise((resolve) => setImmediate(resolve));
   assert.ok(toggleRequest.url.endsWith("/disable"));
   assert.deepEqual(toggleRequest.body, { root: "a-copilot", name: "project-a" }, "只停用对应来源，不修改赢家策略");
@@ -153,7 +192,7 @@ try {
     if (options?.method === "POST" && url.endsWith("/disable")) await new Promise((resolve) => { completePendingToggle = resolve; });
     return fetchBeforePending(url, options);
   };
-  find((node) => node.props.role === "switch" && node.props["aria-label"] === t("skill.toggle") + " project-a").props.onClick();
+  find((node) => node.props["aria-label"] === t("skill.toggle") + " project-a").props.onChange();
   tab("技能仓库");
   completePendingToggle(); await new Promise((resolve) => setImmediate(resolve)); render();
   assert.equal(operationFeedback(), undefined, "操作在切换页签后完成也不能污染仓库提示");
@@ -164,7 +203,7 @@ try {
   projectCopy.fallbackTo = { root: "copilot", name: "project-a", scope: "user" };
   render();
   assert.ok(find((node) => node.props.className === "dssm-note dssm-fallback" && node.children.includes("当前使用全局 Copilot 副本。")), "项目停用行显示全局接管来源");
-  assert.ok(find((node) => node.props.className === "dssm-status dssm-disabled" && node.children.includes("已停用")), "提示不改变副本的停用状态");
+  assert.equal(find((node) => node.props["aria-label"] === t("skill.toggle") + " project-a").props.checked, false, "提示不改变副本的停用状态");
   projectCopy.fallbackTo = { root: "a-dsh", name: "project-a", scope: "project" };
   render();
   assert.ok(find((node) => node.props.className === "dssm-note dssm-fallback" && String(node.children[0]).includes("当前使用项目")));
@@ -173,7 +212,7 @@ try {
   assert.equal(find((node) => node.props.className === "dssm-note dssm-fallback"), undefined, "无接管来源时不显示提示");
   projectCopy.enabled = true;
   render();
-  assert.equal(nodes().filter((node) => node.props.role === "tab").length, 4, "仓库、回收站与两个技能视图同级");
+  assert.equal(find((node) => node.props?.block === true).props.options.length, 4, "仓库、回收站与两个技能视图同级");
   data.trash.push(
     { id: "trash-a", name: "removed-a", deletedAt: "2026-09-12T00:00:00Z", root: { scope: "project", projectName: "A" } },
     { id: "trash-b", name: "removed-b", deletedAt: "2026-09-12T00:00:00Z", root: { scope: "user" } },
@@ -189,32 +228,33 @@ try {
   assert.deepEqual(rows(), ["removed-a", "removed-b"], "回收站直接展示全局和项目条目");
   assert.equal(find((node) => node.props["aria-label"] === t("search")), undefined, "回收站不显示技能筛选");
   assert.equal(find((node) => node.props.className === "dssm-summary"), undefined);
-  assert.equal(find((node) => node.type === "button" && node.children.includes(t("btn.create"))), undefined);
+  assert.equal(find((node) => node.children.includes(t("btn.create"))), undefined);
   assert.equal(find((node) => node.props.role === "tabpanel").props["aria-labelledby"], "dssm-tab-trash");
-  assert.equal(find((node) => node.props.className === "dssm-trash-count").children[0], 2);
-  find((node) => node.type === "button" && node.children.includes(t("btn.restore"))).props.onClick();
+  const trashTab = find((node) => node.props?.block === true).props.options.find((item) => item.value === "trash");
+  assert.equal([].concat(trashTab.label).find((node) => node?.props?.className === "dssm-trash-count").children[0], 2);
+  find((node) => node.children.includes(t("btn.restore"))).props.onClick();
   await new Promise((resolve) => setImmediate(resolve)); render();
   assert.ok(toggleRequest.url.endsWith("/trash-restore"));
   assert.deepEqual(toggleRequest.body, { id: "trash-a" });
   assert.deepEqual(rows(), ["removed-b"]);
-  find((node) => node.type === "button" && node.children.includes(t("btn.delete.forever"))).props.onClick(); render();
-  assert.ok(find((node) => node.props.role === "dialog"), "永久删除仍需确认");
-  find((node) => node.type === "button" && node.children.includes(t("btn.cancel"))).props.onClick(); render();
-  assert.equal(find((node) => node.props.role === "dialog"), undefined, "取消后留在回收站 Tab");
+  find((node) => node.children.includes(t("btn.delete.forever"))).props.onClick(); render();
+  assert.ok(find((node) => node.props.title === t("confirm.delete.title")), "永久删除仍需确认");
+  find((node) => node.children.includes(t("btn.cancel"))).props.onClick(); render();
+  assert.equal(find((node) => node.props.title === t("confirm.delete.title")), undefined, "取消后留在回收站 Tab");
   assert.deepEqual(rows(), ["removed-b"]);
-  find((node) => node.type === "button" && node.children.includes(t("btn.delete.forever"))).props.onClick(); render();
-  nodes().filter((node) => node.type === "button" && node.children.includes(t("btn.delete.forever"))).at(-1).props.onClick();
+  find((node) => node.children.includes(t("btn.delete.forever"))).props.onClick(); render();
+  nodes().filter((node) => node.children.includes(t("btn.delete.forever"))).at(-1).props.onClick();
   await new Promise((resolve) => setImmediate(resolve)); render();
   assert.ok(toggleRequest.url.endsWith("/trash-delete"));
   assert.deepEqual(toggleRequest.body, { id: "trash-b" });
-  assert.equal(find((node) => node.props.role === "dialog"), undefined);
+  assert.equal(find((node) => node.props.title === t("confirm.delete.title")), undefined);
   assert.ok(find((node) => node.props.className === "dssm-empty" && node.children.includes(t("trash.empty"))));
   assert.equal(find((node) => node.props.className === "dssm-trash-count"), undefined, "空回收站不显示数量徽标");
   tab("全局技能");
   assert.deepEqual(rows(), ["global-two"], "经过回收站仍保留全局筛选");
   tab("项目技能");
   assert.deepEqual(rows(), ["project-a"], "经过回收站仍保留所选项目与筛选");
-  const create = find((node) => node.type === "button" && node.children.includes(t("btn.create")));
+  const create = find((node) => node.children.includes(t("btn.create")));
   assert.equal(create.props.disabled, false, "项目页仍可创建全局技能");
   create.props.onClick(); render();
   assert.equal(find((node) => node.props["aria-label"] === t("create.target")), undefined, "创建位置没有下拉框");
@@ -222,16 +262,16 @@ try {
   for (const [key, value] of [["name", "new-global"], ["description", "description"], ["body", "body"]]) {
     find((node) => node.props.placeholder === t("create." + key + ".placeholder")).props.onChange({ target: { value } }); render();
   }
-  nodes().filter((node) => node.type === "button" && node.children.includes(t("btn.create.now"))).at(-1).props.onClick();
+  nodes().filter((node) => node.children.includes(t("btn.create.now"))).at(-1).props.onClick();
   await new Promise((resolve) => setImmediate(resolve)); render();
   assert.ok(toggleRequest.url.endsWith("/create"));
   assert.equal(toggleRequest.body.root, "dsh", "项目页创建也只提交全局 DSH 目标");
   create.props.onClick(); render();
   await selectSession(undefined);
-  assert.equal(find((node) => node.props.role === "dialog"), undefined, "会话切换关闭旧项目创建表单");
+  assert.equal(find((node) => node.props.title === t("create.title")), undefined, "会话切换关闭旧项目创建表单");
   assert.equal(groups().length, 0, "无当前会话不回退其他项目");
   assert.ok(find((node) => node.children.includes(t("project.empty"))), "无当前项目显示空状态");
-  assert.equal(find((node) => node.type === "button" && node.children.includes(t("btn.create"))).props.disabled, false, "无当前项目仍可创建全局技能");
+  assert.equal(find((node) => node.children.includes(t("btn.create"))).props.disabled, false, "无当前项目仍可创建全局技能");
   let resolveOld;
   globalThis.fetch = async (_, options) => {
     const snapshot = { data: sessionData(options) };

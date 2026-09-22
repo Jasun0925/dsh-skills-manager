@@ -2645,6 +2645,7 @@ export async function skillDetail(key: string, name: string, options: ScopeOptio
     path: entry.docPath,
     kind: entry.kind,
     body: doc.body.trim(),
+    document: raw,
     frontmatter: summary.hasFrontmatter
       ? Object.fromEntries(Object.entries(doc.map))
       : null,

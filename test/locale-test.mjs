@@ -3,6 +3,8 @@
 // 运行：node test/locale-test.mjs
 
 import { readFile } from "node:fs/promises";
+import react from "react";
+import * as reactDom from "react-dom";
 
 let passed = 0;
 let failed = 0;
@@ -65,13 +67,9 @@ ok(
 );
 
 const bundle = loaded.factory((id) => {
-  if (id === "react") return { createElement: function () {} };
-  if (id === "react-dom/client")
-    return {
-      createRoot: function () {
-        return { render: function () {} };
-      },
-    };
+  if (id === "react") return react;
+  if (id === "react/jsx-runtime") return { jsx: react.createElement, jsxs: react.createElement, Fragment: react.Fragment };
+  if (id.startsWith("react-dom")) return reactDom;
   if (id === "@deepseek-ai/dsh-client-ui-primitives")
     return {
       IconListPenOutline16: function () {},
@@ -166,16 +164,8 @@ ok(
   "settings title groups the project and feedback links together",
 );
 ok(
-  /require\w*\(["']@deepseek-ai\/dsh-client-ui-primitives["']\)/.test(source),
-  "feedback link loads the host primitive icon module",
-);
-ok(
-  /IconListPenOutlineRegular/.test(source) && /IconListPenOutline16/.test(source),
-  "feedback link resolves the 0.1.7 icon and keeps the earlier size-suffixed name",
-);
-ok(
-  /IconChevronDownOutlineRegular/.test(source) && /IconChevronDownOutline14/.test(source),
-  "source menus resolve the 0.1.7 chevron and keep the earlier size-suffixed name",
+  source.includes("ConfigProvider") && source.includes("data-ds-dark-theme"),
+  "settings controls use Ant Design and follow the host color scheme",
 );
 ok(
   /function GithubMark16\(\)/.test(source),
@@ -186,8 +176,16 @@ ok(
   "project link GitHub icon follows the active theme color",
 );
 ok(
-  /className: "dssm-feedback-link"/.test(source),
-  "settings title renders a semantically named feedback link",
+  /icon: h\(GithubMark16\)/.test(source),
+  "project link keeps the GitHub icon on an Ant Design button",
+);
+ok(
+  /icon: h\(FeedbackIcon\)/.test(source),
+  "feedback link keeps its icon on an Ant Design button",
+);
+ok(
+  !source.includes(".dssm-feedback-link{"),
+  "title links no longer use the old custom button chrome",
 );
 ok(
   /href: "https:\/\/github\.com\/MichengAI\/dsh-skills-manager", target: "_blank", rel: "noreferrer", "aria-label": t\("link\.project"\)/.test(
@@ -208,10 +206,8 @@ ok(
   "feedback link opens safely with a localized accessible name",
 );
 ok(
-  /\.dssm-feedback-link:focus-visible\{outline:2px solid var\(--dsw-alias-brand-primary,[^;]+;outline-offset:2px\}/.test(
-    source,
-  ),
-  "feedback link has a visible keyboard focus style",
+  (source.match(/size: "small", shape: "default"/g) || []).length === 2,
+  "title links use small rectangular Ant Design buttons",
 );
 eq(
   DICT.zh["link.project"],
@@ -973,7 +969,7 @@ ok(
   "Trash identifies the original user or project source before restore",
 );
 ok(
-  source.includes("createRoot = allRoots.find"),
+  /allRoots\.find\(function\s*\(root\)[\s\S]{0,80}root\.key === "dsh"/.test(source),
   "global creation stays available independently of the current project",
 );
 ok(
@@ -1028,10 +1024,8 @@ ok(
   "source toggles stay in the collapsible source header",
 );
 ok(
-  source.includes("SegmentedTabs") &&
-    /role: "tablist"/.test(source) &&
-    source.includes('gridTemplateColumns: "repeat(" + count + ", minmax(0, 1fr))"'),
-  "settings separates global and project skills using tabs",
+  source.includes("Segmented") && source.includes("block: true"),
+  "settings separates scopes with a full-width segmented control",
 );
 
 let registerOptions = null;
