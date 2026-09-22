@@ -305,12 +305,16 @@ if (process.platform !== "win32") {
 
 // ── 客户端装配约束 ──
 // 客户端 bundle 由宿主 AMD 加载，无法在零依赖测试中直接挂载；仅保留协议常量锚点。
-const clientSource = await readFile(
+const clientBundle = await readFile(
   new URL("../lib/client.js", import.meta.url),
   "utf8",
 );
+const clientSource = await readFile(
+  new URL("../src/client.ts", import.meta.url),
+  "utf8",
+);
 ok(
-  clientSource.includes('id: "@michengai/dsh-skills-manager"'),
+  clientBundle.includes('id: "@michengai/dsh-skills-manager"'),
   "client registers the scoped package module ID",
 );
 ok(
@@ -356,7 +360,7 @@ ok(
   "category filter exposes an accessible label",
 );
 ok(
-  clientSource.includes("popupMatchSelectWidth"),
+  (await readFile(new URL("../src/source-select.ts", import.meta.url), "utf8")).includes("popupMatchSelectWidth"),
   "筛选下拉使用 Ant Design Select",
 );
 const packageJson = JSON.parse(

@@ -44,6 +44,15 @@ function sameSet(a, b, msg) {
 }
 
 const source = await readFile(
+  new URL("../src/client.ts", import.meta.url),
+  "utf8",
+);
+const literalSource = [
+  source,
+  await readFile(new URL("../src/repository-ui.ts", import.meta.url), "utf8"),
+  await readFile(new URL("../src/plugin-update-ui.ts", import.meta.url), "utf8"),
+].join("\n");
+const bundleSource = await readFile(
   new URL("../lib/client.js", import.meta.url),
   "utf8",
 );
@@ -60,7 +69,7 @@ const fakeWindow = {
     },
   },
 };
-new Function("window", source)(fakeWindow);
+new Function("window", bundleSource)(fakeWindow);
 ok(
   loaded !== null && typeof loaded.factory === "function",
   "client bundle registers via window.__ModuleLoader__.load with a factory",
@@ -143,7 +152,7 @@ for (const code of hostCodes) {
 }
 
 const literalTranslationKeys = new Set();
-for (const match of source.matchAll(
+for (const match of literalSource.matchAll(
   /\bt\(\s*["']([A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)*)["']/g,
 ))
   literalTranslationKeys.add(match[1]);
@@ -164,7 +173,8 @@ ok(
   "settings title groups the project and feedback links together",
 );
 ok(
-  source.includes("ConfigProvider") && source.includes("data-ds-dark-theme"),
+  (await readFile(new URL("../src/antd-ui.ts", import.meta.url), "utf8")).includes("ConfigProvider") &&
+    (await readFile(new URL("../src/host-theme.ts", import.meta.url), "utf8")).includes("data-ds-dark-theme"),
   "settings controls use Ant Design and follow the host color scheme",
 );
 ok(

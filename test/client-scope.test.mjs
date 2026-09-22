@@ -92,7 +92,7 @@ try {
     if (!node || typeof node !== "object" || Array.isArray(node)) return [];
     // 筛选业务测试只驱动受控值；官方菜单交互由专用测试与真实浏览器验证。
     if (typeof node.type === "function" && Array.isArray(node.props?.options) && node.props.label && node.props.onChange) return [{ type: "select-fixture", props: { "aria-label": node.props.label, options: node.props.options, onChange: (event) => node.props.onChange(event?.target ? event.target.value : event) }, children: [] }];
-    if (node.type?.name === "SkillSwitch" || node.props?.closeLabel) return nodes(node.type({ ...node.props, children: node.children }));
+    if (node.type?.name === "SkillSwitch" || node.props?.closeLabel || (typeof node.type === "function" && node.props && "on" in node.props && typeof node.props.label === "string")) return nodes(node.type({ ...node.props, children: node.children }));
     const nested = linkedNodes(node.children);
     if (typeof node.type === "function") {
       linkedNodes(node.props?.header, nested);

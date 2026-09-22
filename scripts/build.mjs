@@ -40,6 +40,7 @@ try {
     platform: "browser",
     target: "es2022",
     external: ["react", "react-dom", "react/jsx-runtime", "react-dom/client"],
+    minify: true,
     define: { "process.env.NODE_ENV": "\"production\"" },
     banner: {
       js: "window.__ModuleLoader__.load({ id: \"@michengai/dsh-skills-manager\", factory: (require) => {\nvar module = { exports: {} };\nvar exports = module.exports;",

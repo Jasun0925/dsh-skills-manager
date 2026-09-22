@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 const selectSource = await readFile(new URL("../src/source-select.ts", import.meta.url), "utf8");
 assert.ok(selectSource.includes("popupMatchSelectWidth: false"), "筛选下拉按内容展开，不跟触发器等宽");
 assert.ok(selectSource.includes("danger: option.danger"), "操作菜单保留危险标记");
+assert.ok(selectSource.includes('window.addEventListener("keydown", onKey, true)'), "打开的筛选或操作菜单在捕获阶段接收 Escape");
+assert.ok(selectSource.includes("stopImmediatePropagation"), "菜单 Escape 不再传到宿主设置页");
 assert.ok(!selectSource.includes("dsh-client-ui-primitives"), "下拉不再使用宿主菜单");
 
 const source = await readFile(new URL("../src/client.ts", import.meta.url), "utf8");

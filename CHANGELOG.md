@@ -4,16 +4,13 @@
 
 ## Unreleased
 
-- Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions. Settings icons use the 0.1.7 weight-based exports when the host provides them, and the earlier size-suffixed exports on older hosts.
-- Use the host Switch, Button, Tag, segmented tabs, and modal when that host provides them. Older hosts get local copies of the missing switch, tag, and segmented tabs with the same appearance. Enabled switches use the success color. Escape in a dialog still closes only that dialog.
-- Keep fallback tabs in one row on older hosts, and open dialogs with focus on the panel rather than the close button. Shift+Tab from that panel stays inside the dialog.
-- Keep the source and status menus at the width of their labels, and place search on the same row at the right.
-- Replace settings controls with Ant Design. Buttons, inputs, selects, tabs, switches, tags, and dialogs follow its default blue theme and the host light or dark scheme. Old host-widget styles are removed.
+- Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions.
+- Replace settings controls with Ant Design. Buttons, inputs, selects, tabs, switches, tags, and dialogs follow its default blue theme and the host light or dark scheme. The settings client is minified, and it uses the host’s single copy of React and React DOM.
 - Use Ant Design’s default-size round buttons for page actions. The GitHub, feedback, and update actions stay small and rectangular, and keep their icons. The update dialog is an Ant Design modal at its default position: the status sits on the latest-version row, and the manual command wraps instead of scrolling sideways. Escape closes only that dialog.
-- Show skill body and frontmatter in read-only text areas at the default 14px size instead of 11px gray monospace. The diagnostics, body, and frontmatter headings use that same size.
+- Keep the source and status menus at the width of their labels, and place search on the same row at the right. Escape closes an open filter or action menu and does not close the host settings page.
 - Render each skill source as an Ant Design Collapse and the skills inside it as a List. The skill description appears when hovering the name. The skill detail dialog matches the repository detail: the name, a description paragraph, the source path, and one read-only body.
-- Remove unused skill-table, row-grid, and action-menu styles. Dialogs stay at Ant Design’s default position.
 - Place each skill switch at the right edge of its row so it lines up with the source switch. The enabled and disabled labels are omitted beside that switch. Shadowed and invalid skills still show their status.
+- Remove unused skill-table, row-grid, and action-menu styles. Dialogs stay at Ant Design’s default position.
 
 ## 1.0.1 - 2026-09-21
 
