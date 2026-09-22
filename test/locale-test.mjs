@@ -170,8 +170,12 @@ ok(
   "feedback link loads the host primitive icon module",
 );
 ok(
-  /IconListPenOutline16/.test(source),
-  "feedback link uses the archive plugin feedback icon",
+  /IconListPenOutlineRegular/.test(source) && /IconListPenOutline16/.test(source),
+  "feedback link resolves the 0.1.7 icon and keeps the earlier size-suffixed name",
+);
+ok(
+  /IconChevronDownOutlineRegular/.test(source) && /IconChevronDownOutline14/.test(source),
+  "source menus resolve the 0.1.7 chevron and keep the earlier size-suffixed name",
 );
 ok(
   /function GithubMark16\(\)/.test(source),
@@ -991,7 +995,7 @@ ok(
   "opening import clears stale upload feedback and selection",
 );
 ok(
-  /onClick:\s*function\s*\(\)\s*\{\s*refresh\(false\);/.test(source),
+  /hostButton\(t\("btn\.refresh"\),\s*function\s*\(\)\s*\{\s*refresh\(false\);/.test(source),
   "settings exposes an explicit refresh action for project file changes",
 );
 ok(

@@ -8,7 +8,7 @@ type RepoSkill = RepoView['skills'][number];
 type Feedback = {error?: boolean; payload?: unknown; key?: string; name?: string; text?: string};
 type Installation = Feedback & {id: string; path: string; pending?: boolean};
 type RepoModal = {type: 'add' | 'manage'} | {type: 'remove'; repo: RepoView} | {type: 'detail'; repo: RepoView; detail?: ApiRoutes['/repositories/detail']; loading?: boolean; failed?: boolean} | {type: 'review' | 'rollback'; repo: RepoView; skill: RepoSkill; detail: ApiRoutes['/repositories/preview']};
-interface Dependencies {react: typeof React; Modal: React.ComponentType<ModalProps>; Input: typeof Primitives.Input; SourceSelect: React.ComponentType<SourceSelectProps>; api: ApiCall; headers: Record<string, string>; translateError: (t: Translate, error: unknown) => string}
+interface Dependencies {react: typeof React; Modal: React.ComponentType<ModalProps>; Input: typeof Primitives.Input; Button: typeof Primitives.Button; SourceSelect: React.ComponentType<SourceSelectProps>; api: ApiCall; headers: Record<string, string>; translateError: (t: Translate, error: unknown) => string}
 import type { CodedError } from "./types.js";
 // 仓库页复用宿主技能面板组件；只在进入页签时读取本地目录缓存。
 export const repositoryLocales = {
@@ -43,7 +43,7 @@ export const repositoryLocales = {
 const CSS = `.dssm-repo-spinner{display:inline-block;width:12px;height:12px;margin-right:6px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dssm-repo-spin .8s linear infinite}@keyframes dssm-repo-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.dssm-repo-spinner{animation:none}}.dssm-repo-panel{display:flex;flex-direction:column;gap:12px;min-width:0}.dssm-repo-row{display:flex;align-items:center;gap:8px;padding:11px 13px;border-top:1px solid var(--dsw-alias-border-l1,#3a3a3a)}.dssm-repo-row:first-child{border-top:0}.dssm-repo-main{flex:1;min-width:0}.dssm-repo-description{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:12px}.dssm-repo-filters{display:flex;gap:9px}.dssm-repo-filters>*{flex:1;min-width:0}.dssm-repo-panel .dssm-desc{margin:0}.dssm-repo-metadata{font-size:11px;color:var(--dsw-alias-label-tertiary,#a0a0a0);overflow-wrap:anywhere}.dssm-repo-panel .dssm-source{flex-shrink:0}.dssm-tabs{gap:20px;overflow-x:auto}@container(max-width:400px){.dssm-repo-row{flex-wrap:wrap}.dssm-repo-main{flex-basis:100%}.dssm-tabs{gap:12px}}`;
 
 /** 返回动作区与内容区，使现有标题、页签顺序保持不变。 */
-export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, headers, translateError }: Dependencies) {
+export function createRepositoryUI({ react, Modal, Input, Button, SourceSelect, api, headers, translateError }: Dependencies) {
   const h = react.createElement;
   return function useRepositoryUI({ active, t, onInstalled }: {active: boolean; t: Translate; onInstalled?: () => unknown}) {
     const [repos, setRepos] = react.useState<RepoView[]>([]);
@@ -101,10 +101,10 @@ export function createRepositoryUI({ react, Modal, Input, SourceSelect, api, hea
       }, false, true);
     }
     react.useEffect(() => { if (active) perform(load, false); }, [active]);
-    function button(key: string, action: () => unknown, secondary = true, disabled = false) { return h("button", { type: "button", className: "dssm-btn" + (secondary ? " dssm-btn-secondary" : ""), disabled: busy || disabled, onClick: action }, t(key)); }
+    function button(key: string, action: () => unknown, secondary = true, disabled = false) { return h(Button, { variant: secondary ? "outline" : "primary", size: "sm", disabled: busy || disabled, onClick: action }, t(key)); }
     function refreshButton(selected: RepoView[], row = false) {
       const pending = refreshing && (!row || refreshing.id === selected[0]?.id);
-      return h("button", { type: "button", className: "dssm-btn dssm-btn-secondary", disabled: busy || !selected.length, "aria-busy": !!pending, onClick: () => refresh(selected) },
+      return h(Button, { variant: "outline", size: "sm", disabled: busy || !selected.length, "aria-busy": !!pending, onClick: () => refresh(selected) },
         pending ? h("span", { className: "dssm-repo-spinner", "aria-hidden": true }) : null, t(pending ? "repo.refreshing" : "repo.refresh"));
     }
     function close() { if (!locked.current) setModal(null); }
