@@ -39,6 +39,11 @@ try {
     Tag(props) { return { type: "span", props, children: [].concat(props.children || []).flat() }; },
     Input(props) { return { type: "input", props, children: [] }; },
     Menu(props) { return { type: "menu", props, children: [].concat(props.children || []).flat() }; },
+    Modal(props) { return props.open === false ? null : { type: "div", props: { role: "dialog" }, children: [].concat(props.children || []).flat() }; },
+    SegmentedTabs(props) {
+      const labels = (label) => typeof label === "string" ? [label] : Array.isArray(label) ? label : [];
+      return { type: "div", props: { role: "tablist", "aria-label": props.label }, children: props.items.map((item) => ({ type: "button", props: { role: "tab", id: item.id, onClick: () => props.onChange(item.value) }, children: labels(item.label) })) };
+    },
   };
   const client = definition.factory((id) => id === "react" ? react : primitives);
   client.apply({ effect() {}, slots: { inject(name, fn) { fn(); }, register(options, fn) { component = fn; } } });

@@ -5,7 +5,7 @@
 ## Unreleased
 
 - Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions. Settings icons use the 0.1.7 weight-based exports when the host provides them, and the earlier size-suffixed exports on older hosts.
-- Use the host Switch, Button, and Tag for skill toggles, actions, and read-only labels. Tabs, dialogs, and import controls stay as they are.
+- Use the host Switch, Button, Tag, segmented tabs, and modal. Enabled switches use the success color. Escape in a dialog still closes only that dialog.
 
 ## 1.0.1 - 2026-09-21
 
