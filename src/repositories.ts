@@ -1,11 +1,11 @@
 import type { Archive, Repository, RepositoryInput, RepositorySkill, RepositoryState, InstallRecord, Serialize, SkillRequest, Log, CodedError } from "./types.js";
-// 公开 GitHub 仓库目录：直连归档下载服务、固定内容快照安装，不执行仓库代码。
+// 公开 GitHub 与 Bitbucket 仓库目录：直连归档下载，固定内容快照安装，不执行仓库代码。
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { unzipSync } from "fflate";
 import { managerHomePath, parseSkillDoc, importUploadedSkill, state, userRoots } from "./core.js";
-import { createRepositoryUpdater, fileIndex, signature, readSkillTree } from "./repository-updates.js";
+import { createRepositoryUpdater, fileIndex, signature, readSkillTree, repositoryInput } from "./repository-updates.js";
 
 const LIMIT = 32 << 20;
 const hash = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -26,7 +26,7 @@ function validateStoredState(input: unknown): asserts input is RepositoryState {
   if (!value || value.version !== 1 || !Array.isArray(value.repositories) || value.repositories.length > 30 || !Array.isArray(value.installs)) throw failure("仓库状态格式无效");
   for (const repo of value.repositories) {
     if (!repo || typeof repo.id !== "string" || !Array.isArray(repo.skills) || repo.skills.length > 500) throw failure("仓库状态格式无效");
-    const source = parseRepositoryInput({ url: `${repo.owner}/${repo.name}`, ref: repo.ref, subdirectory: repo.subdirectory });
+    const source = parseRepositoryInput(repositoryInput(repo));
     if (hash(JSON.stringify(source)).slice(0, 24) !== repo.id || (repo.commit !== null && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(repo.commit))) throw failure("仓库状态来源无效");
     for (const skill of repo.skills) {
       if (!skill || typeof skill.name !== "string" || typeof skill.description !== "string" || typeof skill.body !== "string" || typeof skill.valid !== "boolean" || !/^[a-f0-9]{64}$/.test(skill.documentHash)) throw failure("仓库技能状态无效");
@@ -45,21 +45,27 @@ function validateStoredState(input: unknown): asserts input is RepositoryState {
   }
 }
 
-/** 解析公开仓库地址；含斜杠的分支通过独立 ref 字段提供。 */
+/** 解析公开仓库地址；含斜杠的分支通过独立 ref 字段提供。GitHub 结果不带 host，以保持已有记录的标识不变。 */
 export function parseRepositoryInput(input: RepositoryInput = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw failure("仓库参数必须是对象");
   if ((["ref", "subdirectory"] as const).some((key) => input[key] !== undefined && typeof input[key] !== "string")) throw failure("仓库分支和子目录必须是字符串");
   let raw = typeof input.url === "string" ? input.url.trim() : "";
   if (raw.length > 2048 || /[%?#\\\s]/.test(raw)) throw failure("仓库地址无效");
-  if (raw.startsWith("https://github.com/")) raw = raw.slice(19);
+  let host: "bitbucket" | undefined;
+  if (raw.startsWith("https://bitbucket.org/")) {
+    host = "bitbucket";
+    raw = raw.slice("https://bitbucket.org/".length);
+  } else if (raw.startsWith("https://github.com/")) raw = raw.slice("https://github.com/".length);
   const parts = raw.replace(/\/$/, "").split("/");
   const owner = (parts[0] || "").toLowerCase();
   const name = (parts[1] || "").replace(/\.git$/, "").toLowerCase();
-  if (!/^[a-z0-9][a-z0-9-]{0,38}$/.test(owner) || !/^[a-z0-9_.-]{1,100}$/.test(name) || name === "." || name === ".." || (parts.length > 2 && (parts[2] !== "tree" || !parts[3]))) throw failure("请输入公开 GitHub 仓库地址或 owner/repo");
+  const marker = host === "bitbucket" ? "src" : "tree";
+  const ownerPattern = host === "bitbucket" ? /^[a-z0-9][a-z0-9_-]{0,61}$/ : /^[a-z0-9][a-z0-9-]{0,38}$/;
+  if (!ownerPattern.test(owner) || !/^[a-z0-9_.-]{1,100}$/.test(name) || name === "." || name === ".." || (parts.length > 2 && (parts[2] !== marker || !parts[3]))) throw failure("请输入公开 GitHub 或 Bitbucket 仓库地址");
   const ref = input.ref || parts[3] || "";
   if (typeof ref !== "string" || ref.length > 200 || (ref && !/^[a-zA-Z0-9_./-]+$/.test(ref)) || ref.includes("..") || ref.startsWith("/") || ref.endsWith("/")) throw failure("仓库分支无效");
   const subdirectory = safePath(input.subdirectory || parts.slice(4).join("/"), true);
-  return { owner, name, ref, subdirectory };
+  return host === "bitbucket" ? { host, owner, name, ref, subdirectory } : { owner, name, ref, subdirectory };
 }
 
 /** 解压前检查声明大小，解压后再检查实际大小和大小写路径冲突。 */
@@ -143,7 +149,7 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
     const repo = data.repositories.find((r) => r.id === id);
     if (!repo) throw failure("仓库不存在");
     // 持久化文件也不能绕过出站目标验证。
-    parseRepositoryInput({ url: `${repo.owner}/${repo.name}`, ref: repo.ref, subdirectory: repo.subdirectory });
+    parseRepositoryInput(repositoryInput(repo));
     return repo;
   }
   async function request(url: string) {
@@ -175,9 +181,14 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
       if (name !== keep && name.startsWith(repo.id + "-") && /^[a-f0-9]{24}-[a-f0-9]{64}\.zip$/.test(name)) await fs.unlink(join(dir, name));
     }
   }
+  function archiveUrl(repo: Repository, revision: string) {
+    if (repo.host === "bitbucket") return `https://bitbucket.org/${repo.owner}/${repo.name}/get/${encodeURIComponent(revision)}.zip`;
+    return `https://codeload.github.com/${repo.owner}/${repo.name}/zip/${revision.split("/").map(encodeURIComponent).join("/")}`;
+  }
   async function download(repo: Repository) {
-    // 兼容旧提交安装记录；新扫描只使用归档摘要缓存，不再访问REST接口。
-    if (/^[a-f0-9]{40}$/.test(repo.commit || "")) return decodeRepositoryArchive(await request(`https://codeload.github.com/${repo.owner}/${repo.name}/zip/${repo.commit}`));
+    // 兼容旧提交安装记录；新扫描只使用归档摘要缓存，不再访问 REST 接口。
+    const pinned = repo.commit || "";
+    if (/^[a-f0-9]{40}$/.test(pinned)) return decodeRepositoryArchive(await request(archiveUrl(repo, pinned)));
     if (!/^[a-f0-9]{64}$/.test(repo.commit || "")) throw failure("请先刷新仓库");
     try {
       const target = join(await cacheDirectory(), `${repo.id}-${repo.commit}.zip`);
@@ -189,9 +200,12 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
     } catch { throw failure("扫描缓存缺失或损坏，请重新检查更新后操作"); }
   }
   async function fetchBranch(repo: Repository): Promise<Buffer> {
-    const refs = repo.ref && repo.ref !== "HEAD" ? [`refs/heads/${repo.ref}`, `refs/tags/${repo.ref}`] : ["HEAD", "refs/heads/main", "refs/heads/master"];
+    const specified = repo.ref && repo.ref !== "HEAD";
+    const refs = repo.host === "bitbucket"
+      ? (specified ? [repo.ref] : ["HEAD", "main", "master"])
+      : (specified ? [`refs/heads/${repo.ref}`, `refs/tags/${repo.ref}`] : ["HEAD", "refs/heads/main", "refs/heads/master"]);
     for (let i = 0; i < refs.length; i++) {
-      try { return await request(`https://codeload.github.com/${repo.owner}/${repo.name}/zip/${refs[i].split("/").map(encodeURIComponent).join("/")}`); }
+      try { return await request(archiveUrl(repo, refs[i])); }
       catch (caught) { const error = caught as CodedError; if (error.httpStatus !== 404 || i === refs.length - 1) throw error; }
     }
     throw failure("仓库分支不存在");
@@ -246,7 +260,7 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
     }, false),
     remove: ({ id }: {id: string}) => serialize(async () => {
       const data = await read(); const repo = repository(data, id);
-      for (const record of data.installs.filter(i => i.id === id)) record.source ||= { owner: repo.owner, name: repo.name, ref: repo.ref, subdirectory: repo.subdirectory };
+      for (const record of data.installs.filter(i => i.id === id)) record.source ||= { ...(repo.host ? { host: repo.host } : {}), owner: repo.owner, name: repo.name, ref: repo.ref, subdirectory: repo.subdirectory };
       data.repositories = data.repositories.filter((r) => r.id !== id);
       await write(data); return { id };
     }, false),
@@ -297,7 +311,7 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
       if (!entries.some((e) => e.path === "SKILL.md")) throw failure("仓库技能内容已失效");
       // 先持久化来源意图；即使安装后进程退出，也能追溯安装的仓库和提交。
       data.installs = data.installs.filter((i) => i.name !== skill.name);
-      const record = { id, path, source: { owner: repo.owner, name: repo.name, ref: repo.ref, subdirectory: repo.subdirectory }, name: skill.name, commit: repo.commit, complete: false, files: entries.map((e) => ({ path: e.path, hash: hash(Buffer.from(e.data, "base64")) })) };
+      const record = { id, path, source: { ...(repo.host ? { host: repo.host } : {}), owner: repo.owner, name: repo.name, ref: repo.ref, subdirectory: repo.subdirectory }, name: skill.name, commit: repo.commit, complete: false, files: entries.map((e) => ({ path: e.path, hash: hash(Buffer.from(e.data, "base64")) })) };
       data.installs.push(record);
       await write(data);
       try {

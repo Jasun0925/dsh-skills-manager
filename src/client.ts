@@ -320,7 +320,7 @@ import { antdLocaleFromDocument } from "./antd-locale.js";
         var nameNode = h("div", { className: "dssm-name" }, skillName);
         return h(List.Item, { key: root.key + ":" + skill.name, actions: [h("div", { className: "dssm-skill-actions" }, skillActions)] }, h(List.Item.Meta, {
           title: skill.description ? h(Tooltip, { title: skill.description }, nameNode) : nameNode,
-          description: h("div", { className: "dssm-row-meta" }, h("div", { className: "dssm-row-source" }, skill.installSource ? h("a", { href: "https://github.com/" + skill.installSource.owner + "/" + skill.installSource.name, target: "_blank", rel: "noreferrer", title: t("repo.source") }, skill.installSource.owner + "/" + skill.installSource.name) : t("repo.local"), !root.mutable ? hostTag(t("status.readonly")) : null), renderFallback(skill)),
+          description: h("div", { className: "dssm-row-meta" }, h("div", { className: "dssm-row-source" }, skill.installSource ? h("a", { href: (skill.installSource.host === "bitbucket" ? "https://bitbucket.org/" : "https://github.com/") + skill.installSource.owner + "/" + skill.installSource.name, target: "_blank", rel: "noreferrer", title: t("repo.source") }, skill.installSource.owner + "/" + skill.installSource.name) : t("repo.local"), !root.mutable ? hostTag(t("status.readonly")) : null), renderFallback(skill)),
         }));
       }
       var rows = roots.flatMap(function (root) { return (root.skills || []).map(function (skill) { return { root: root, skill: skill }; }); });

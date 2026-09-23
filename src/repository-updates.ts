@@ -6,6 +6,15 @@ import { join, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { managerHomePath, userRoots } from "./core.js";
 
+/** 旧的 GitHub 记录没有 host。补上主机后再解析，避免把 Bitbucket 仓库当成同名 GitHub 仓库。 */
+export function repositoryInput(source: { host?: "bitbucket"; owner: string; name: string; ref?: string; subdirectory?: string }) {
+  return {
+    url: source.host === "bitbucket" ? `https://bitbucket.org/${source.owner}/${source.name}` : `${source.owner}/${source.name}`,
+    ref: source.ref,
+    subdirectory: source.subdirectory,
+  };
+}
+
 const hash = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 export const fileIndex = (entries: Archive) => Object.entries(entries!).map(([path, bytes]) => ({ path, hash: hash(bytes) })).sort((a, b) => a.path.localeCompare(b.path, "en"));
 export const signature = (files: FileDigest[]) => hash(JSON.stringify([...files].map(({ path, hash }) => ({ path, hash })).sort((a, b) => a.path.localeCompare(b.path, "en"))));
@@ -113,7 +122,7 @@ export function createRepositoryUpdater({ read, write, repository, download, ser
     for (const record of data.installs.filter(i => i.complete)) {
       const source = record.source || data.repositories.find(r => r.id === record.id);
       if (!source) continue;
-      const parsed = parseRepositoryInput({ url: `${source.owner}/${source.name}`, ref: source.ref, subdirectory: source.subdirectory });
+      const parsed = parseRepositoryInput(repositoryInput(source));
       result[record.name] = { ...parsed, id: record.id, path: record.path, commit: record.commit };
     }
     return result;

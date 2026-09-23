@@ -131,6 +131,7 @@ export interface FileDigest {
 }
 export type Archive = Record<string, Uint8Array>;
 export interface RepositorySource {
+    host?: "bitbucket";
     owner: string;
     name: string;
     ref: string;

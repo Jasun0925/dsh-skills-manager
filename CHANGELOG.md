@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.1.1 - 2026-09-23
+
+- Add repository accepts a public Bitbucket address as well as GitHub. `https://bitbucket.org/owner/repo` and a `/src/branch/path` link both work. An empty branch uses HEAD, then main, then master. The archive is downloaded directly and is not executed.
+
 ## 1.1.0 - 2026-09-23
 
 - Add support for DeepSeek Harness `0.1.7-alpha.1` while retaining the seven previously supported versions.

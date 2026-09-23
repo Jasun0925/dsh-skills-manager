@@ -4,6 +4,10 @@
 
 ## 未发布
 
+## 1.1.1 - 2026-09-23
+
+- 添加仓库同时接受公开的 Bitbucket 地址。`https://bitbucket.org/owner/repo` 和 `/src/分支/路径` 都可以。分支留空时依次尝试 HEAD、main、master。归档直接下载，不会执行仓库里的代码。
+
 ## 1.1.0 - 2026-09-23
 
 - 新增 DeepSeek Harness `0.1.7-alpha.1` 兼容支持，保留此前七个版本。

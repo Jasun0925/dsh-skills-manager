@@ -21,7 +21,7 @@ const fetchImpl = async (url, options) => {
   assert.equal(options.redirect, "error", "不跟随网络重定向");
   if (broken === "timeout") throw new DOMException("请求超时", "TimeoutError");
   if (broken) return new Response("", { status: 403 });
-  if (url.startsWith("https://codeload.github.com/")) return new Response(archive);
+  if (url.startsWith("https://codeload.github.com/") || /^https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/get\/.+\.zip$/.test(url)) return new Response(archive);
   if (url.includes("/commits/")) return Response.json({ sha });
   return Response.json({ default_branch: "main", private: false });
 };
@@ -29,7 +29,11 @@ try {
   assert.deepEqual(parseRepositoryInput({ url: "https://github.com/Example/Skills/tree/main/skills" }), { owner: "example", name: "skills", ref: "main", subdirectory: "skills" });
   assert.equal(parseRepositoryInput({ url: "https://github.com/Example/Skills/tree/main/skills", ref: "", subdirectory: "" }).subdirectory, "skills", "表单留空保留地址携带的子目录");
   assert.equal(parseRepositoryInput({ url: "example/skills", ref: "feature/ui" }).ref, "feature/ui");
-  for (const url of ["http://github.com/a/b", "https://github.com.evil/a/b", "https://user:pass@github.com/a/b", "https://github.com/a/b?token=secret", "https://github.com/a/b/tree/main/%2e%2e"]) {
+  assert.deepEqual(parseRepositoryInput({ url: "https://bitbucket.org/Example/Skills/src/main/skills" }), { host: "bitbucket", owner: "example", name: "skills", ref: "main", subdirectory: "skills" });
+  assert.deepEqual(parseRepositoryInput({ url: "https://bitbucket.org/Example/Skills.git" }), { host: "bitbucket", owner: "example", name: "skills", ref: "", subdirectory: "" });
+  assert.equal(parseRepositoryInput({ url: "https://bitbucket.org/my_team/skills" }).owner, "my_team");
+  assert.throws(() => parseRepositoryInput({ url: "my_team/skills" }), /仓库|路径/, "没有主机时下划线工作区仍按 GitHub 规则拒绝");
+  for (const url of ["http://github.com/a/b", "https://github.com.evil/a/b", "https://user:pass@github.com/a/b", "https://github.com/a/b?token=secret", "https://github.com/a/b/tree/main/%2e%2e", "https://bitbucket.org.evil/a/b", "https://bitbucket.org/a/b/tree/main"]) {
     assert.throws(() => parseRepositoryInput({ url }), /仓库|路径/);
   }
   for (const subdirectory of ["../skills", "C:/skills", "skills/CON", "skills/a.", "skills\\pdf"]) assert.throws(() => parseRepositoryInput({ url: "a/b", subdirectory }));
@@ -144,6 +148,15 @@ try {
   const concurrent = await Promise.allSettled([manager.add({ url: "a/concurrent" }), manager.add({ url: "a/concurrent" })]);
   assert.equal(concurrent.filter((r) => r.status === "fulfilled").length, 1, "并发添加不会丢失状态或创建重复来源");
   assert.ok(requested.every(url => url.startsWith("https://codeload.github.com/")), "不消耗GitHub REST API额度");
+  const githubRepo = await manager.add({ url: "example/skills" });
+  const bitbucketRepo = await manager.add({ url: "https://bitbucket.org/example/skills" });
+  assert.notEqual(githubRepo.id, bitbucketRepo.id, "同名 GitHub 与 Bitbucket 仓库不是同一来源");
+  const bitbucketAt = requested.length;
+  await manager.refresh({ id: bitbucketRepo.id });
+  assert.equal(requested[bitbucketAt], "https://bitbucket.org/example/skills/get/HEAD.zip", "Bitbucket 直接下载归档，不访问 REST 接口");
+  assert.equal((await manager.list()).repositories.find(repo => repo.id === bitbucketRepo.id).host, "bitbucket");
+  const reloaded = createRepositoryManager({ fetchImpl: async () => { throw new Error("重载不应请求网络"); } });
+  assert.equal((await reloaded.list()).repositories.find(repo => repo.id === bitbucketRepo.id).host, "bitbucket", "重启后仍记得 Bitbucket 主机");
   const branchRequests = [];
   const branchManager = createRepositoryManager({ fetchImpl: async url => { branchRequests.push(url); return url.includes("/refs/heads/") ? new Response("", { status: 404 }) : new Response(archive); } });
   const tagged = await branchManager.add({ url: "example/tagged", ref: "v1" });
