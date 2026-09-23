@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.1.2 - 2026-09-23
+
+- A private Bitbucket repository whose public archive returns 404 is cloned over the local SSH key, using `git@bitbucket.org:owner/repo.git`. Hooks are disabled. The clone is read as files and is not executed.
+
 ## 1.1.1 - 2026-09-23
 
 - Add repository accepts a public Bitbucket address as well as GitHub. `https://bitbucket.org/owner/repo` and a `/src/branch/path` link both work. An empty branch uses HEAD, then main, then master. The archive is downloaded directly and is not executed.

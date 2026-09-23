@@ -1,9 +1,11 @@
 import type { Archive, Repository, RepositoryInput, RepositorySkill, RepositoryState, InstallRecord, Serialize, SkillRequest, Log, CodedError } from "./types.js";
-// 公开 GitHub 与 Bitbucket 仓库目录：直连归档下载，固定内容快照安装，不执行仓库代码。
+// 公开仓库直连归档。私有 Bitbucket 在公开地址返回 404 时，改用本机 SSH 克隆，禁用钩子，只读取文件。
+import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import { unzipSync } from "fflate";
+import { unzipSync, zipSync } from "fflate";
 import { managerHomePath, parseSkillDoc, importUploadedSkill, state, userRoots } from "./core.js";
 import { createRepositoryUpdater, fileIndex, signature, readSkillTree, repositoryInput } from "./repository-updates.js";
 
@@ -51,6 +53,10 @@ export function parseRepositoryInput(input: RepositoryInput = {}) {
   if ((["ref", "subdirectory"] as const).some((key) => input[key] !== undefined && typeof input[key] !== "string")) throw failure("仓库分支和子目录必须是字符串");
   let raw = typeof input.url === "string" ? input.url.trim() : "";
   if (raw.length > 2048 || /[%?#\\\s]/.test(raw)) throw failure("仓库地址无效");
+  const ssh = /^git@bitbucket\.org:([^/]+)\/([^/]+)$/i.exec(raw);
+  if (ssh) {
+    raw = `https://bitbucket.org/${ssh[1]}/${ssh[2]}`;
+  }
   let host: "bitbucket" | undefined;
   if (raw.startsWith("https://bitbucket.org/")) {
     host = "bitbucket";
@@ -115,7 +121,91 @@ async function readResponse(response: Response, limit: number) {
   return Buffer.concat(chunks, length);
 }
 
-export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {fetchImpl?: typeof fetch; log?: Log} = {}) {
+export function bitbucketSshUrl(owner: string, name: string) {
+  if (!/^[a-z0-9][a-z0-9_-]{0,61}$/.test(owner) || !/^[a-z0-9_.-]{1,100}$/.test(name) || name === "." || name === "..") throw failure("仓库地址无效");
+  return `git@bitbucket.org:${owner}/${name}.git`;
+}
+
+/** 把 git 的失败收成固定文案，避免把临时目录或密钥路径带回界面。 */
+export function describeBitbucketCloneFailure(output: string) {
+  if (/permission denied|publickey|could not read from remote repository/i.test(output)) return failure("本机 SSH 无法访问该 Bitbucket 仓库", "error.repo.network");
+  if (/remote branch .+ not found|could not find remote branch|couldn't find remote ref/i.test(output)) return Object.assign(failure("仓库分支不存在"), { httpStatus: 404 });
+  return failure("通过 SSH 读取 Bitbucket 仓库失败", "error.repo.network");
+}
+
+function runGit(args: string[], cwd: string) {
+  return new Promise<{ code: number; output: string }>((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_SSH_COMMAND: "ssh -o BatchMode=yes" },
+    });
+    let output = "";
+    const take = (chunk: Uint8Array | string) => { output = (output + String(chunk)).slice(-4000); };
+    child.stdout?.on("data", take);
+    child.stderr?.on("data", take);
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(failure("仓库克隆超时，请稍后重试", "error.repo.network"));
+    }, 60000);
+    child.once("error", (error: NodeJS.ErrnoException) => {
+      clearTimeout(timer);
+      reject(error.code === "ENOENT" ? failure("未找到 git，无法通过 SSH 读取私有 Bitbucket 仓库", "error.repo.network") : error);
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timer);
+      resolve({ code: code ?? 1, output });
+    });
+  });
+}
+
+async function archiveRepositoryTree(root: string, rootName: string) {
+  const files: Record<string, Uint8Array> = {};
+  let total = 0;
+  let count = 0;
+  async function walk(directory: string, prefix: string) {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      if (entry.name === ".git") continue;
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      safePath(relative);
+      const full = join(directory, entry.name);
+      const info = await fs.lstat(full);
+      if (info.isSymbolicLink()) throw failure("仓库包含链接，已拒绝读取");
+      if (info.isDirectory()) {
+        await walk(full, relative);
+        continue;
+      }
+      if (!info.isFile()) throw failure("仓库包含不支持的文件");
+      count += 1;
+      total += info.size;
+      if (count > 10000 || info.size > LIMIT || total > 64 << 20) throw failure("仓库解压大小或文件数量超限");
+      files[`${rootName}/${relative}`] = await fs.readFile(full);
+    }
+  }
+  await walk(root, "");
+  return Buffer.from(zipSync(files));
+}
+
+async function cloneBitbucketArchive(repo: { owner: string; name: string }, revision: string) {
+  if (revision.length > 200 || (revision && !/^[a-zA-Z0-9_./-]+$/.test(revision)) || revision.includes("..") || revision.startsWith("/") || revision.endsWith("/")) throw failure("仓库分支无效");
+  const parent = await fs.mkdtemp(join(await fs.realpath(tmpdir()), "dsh-bitbucket-"));
+  const hooks = join(parent, "hooks");
+  const dest = join(parent, "repo");
+  await fs.mkdir(hooks);
+  const args = ["-c", `core.hooksPath=${hooks}`, "-c", "protocol.file.allow=never", "clone", "--depth", "1", "--single-branch", "--no-tags"];
+  if (revision && revision !== "HEAD") args.push("--branch", revision);
+  args.push(bitbucketSshUrl(repo.owner, repo.name), dest);
+  try {
+    const result = await runGit(args, parent);
+    if (result.code !== 0) throw describeBitbucketCloneFailure(result.output);
+    return await archiveRepositoryTree(dest, repo.name);
+  } finally {
+    await fs.rm(parent, { recursive: true, force: true });
+  }
+}
+
+export function createRepositoryManager({ fetchImpl = globalThis.fetch, log, cloneRepository = cloneBitbucketArchive }: {fetchImpl?: typeof fetch; log?: Log; cloneRepository?: (repo: { owner: string; name: string }, revision: string) => Promise<Buffer>} = {}) {
   const file = join(managerHomePath(), "repositories.json");
   let queue: Promise<unknown> = Promise.resolve();
   const serialize: Serialize = (task, recover = true) => { const run = async () => { if (recover) await recoverPending(); return task(); }; const next = queue.then(run, run); queue = next.catch(() => {}); return next; };
@@ -204,11 +294,18 @@ export function createRepositoryManager({ fetchImpl = globalThis.fetch, log }: {
     const refs = repo.host === "bitbucket"
       ? (specified ? [repo.ref] : ["HEAD", "main", "master"])
       : (specified ? [`refs/heads/${repo.ref}`, `refs/tags/${repo.ref}`] : ["HEAD", "refs/heads/main", "refs/heads/master"]);
+    let last: CodedError | undefined;
     for (let i = 0; i < refs.length; i++) {
       try { return await request(archiveUrl(repo, refs[i])); }
-      catch (caught) { const error = caught as CodedError; if (error.httpStatus !== 404 || i === refs.length - 1) throw error; }
+      catch (caught) { const error = caught as CodedError; last = error; if (error.httpStatus !== 404 || i === refs.length - 1) break; }
     }
-    throw failure("仓库分支不存在");
+    if (repo.host !== "bitbucket" || last?.httpStatus !== 404) throw last ?? failure("仓库分支不存在");
+    const sshRefs = specified ? [repo.ref] : ["HEAD", "main", "master"];
+    for (let i = 0; i < sshRefs.length; i++) {
+      try { return await cloneRepository(repo, sshRefs[i]); }
+      catch (caught) { const error = caught as CodedError; last = error; if (error.httpStatus !== 404 || i === sshRefs.length - 1) throw error; }
+    }
+    throw last ?? failure("仓库分支不存在");
   }
   async function matches(record: InstallRecord) {
     try {
