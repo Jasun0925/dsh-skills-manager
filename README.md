@@ -11,15 +11,15 @@
   [简体中文](README.zh-CN.md) · [Changelog](CHANGELOG.md) · [Apache-2.0](LICENSE)
 
   [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-  [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
-  [![npm downloads](https://img.shields.io/npm/dt/%40michengai%2Fdsh-skills-manager.svg?label=npm%20downloads)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
-  [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-skills-manager)
+  [![npm package](https://img.shields.io/npm/v/%40jasun0925%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@jasun0925/dsh-skills-manager)
+  [![npm downloads](https://img.shields.io/npm/dt/%40jasun0925%2Fdsh-skills-manager.svg?label=npm%20downloads)](https://www.npmjs.com/package/@jasun0925/dsh-skills-manager)
+  [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/Jasun0925/dsh-skills-manager)
   [![DSH supported through 0.1.7-alpha.1](https://img.shields.io/badge/DSH-up%20to%200.1.7--alpha.1-2563eb.svg)](#installation)
 </div>
 
 > DSH Skills Manager is a community-maintained DeepSeek Harness (DSH) plugin, not an official DeepSeek AI product.
 
-This README describes **1.1.0**. See the [changelog](CHANGELOG.md) and [release notes](https://github.com/MichengAI/dsh-skills-manager/releases/latest).
+This README describes **1.1.0**. See the [changelog](CHANGELOG.md) and [release notes](https://github.com/Jasun0925/dsh-skills-manager/releases/latest).
 
 ## Features
 
@@ -51,14 +51,14 @@ Skill repositories:
 
 Requires a working DeepSeek Harness installation. The commands below use the `web` profile; replace it with yours if needed.
 
-Supported plugin installation sources are the npm registry and a locally built `.tgz` package. Direct Git/GitHub dependency installation (such as `github:MichengAI/dsh-skills-manager`) is not supported. For source development, install development dependencies and build the project before loading it into DSH.
+Supported plugin installation sources are the npm registry and a locally built `.tgz` package. Direct Git/GitHub dependency installation (such as `github:Jasun0925/dsh-skills-manager`) is not supported. For source development, install development dependencies and build the project before loading it into DSH.
 
 ### Ask an agent to install it
 
 Send this to an agent that can use your local terminal:
 
 ```text
-Install the latest @michengai/dsh-skills-manager into my DSH web profile using the official npm registry. Confirm installation and explain how to reload DSH.
+Install the latest @jasun0925/dsh-skills-manager into my DSH web profile using the official npm registry. Confirm installation and explain how to reload DSH.
 ```
 
 ### Install manually
@@ -66,7 +66,7 @@ Install the latest @michengai/dsh-skills-manager into my DSH web profile using t
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=https://registry.npmjs.org/
+dsh plugin --profile web add @jasun0925/dsh-skills-manager@latest --registry=https://registry.npmjs.org/
 ```
 
 Restart DSH, refresh the page, and open **Settings → Skills**. To update, select **Check for updates** or run the installation command again.
@@ -130,7 +130,7 @@ For a desktop workbench, download [DSH Codex Desktop](https://github.com/Micheng
 | --- | --- |
 | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | Organize projects and conversations, search tasks, and navigate chat turns |
 | [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | Choose and summon specialists for your task |
-| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | Manage local and project skills; install, update and roll back repository skills |
+| [Skills Manager](https://github.com/Jasun0925/dsh-skills-manager) | Manage local and project skills; install, update and roll back repository skills |
 | [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | Search, restore, or clean up archived conversations |
 | [IM Connect](https://github.com/MichengAI/dsh-im-connect) | Send tasks and receive replies through messaging platforms |
 | [Automation](https://github.com/MichengAI/dsh-automation) | Schedule tasks and review each run |
@@ -142,7 +142,7 @@ For a desktop workbench, download [DSH Codex Desktop](https://github.com/Micheng
 
 ## Feedback and contributions
 
-[Open an issue](https://github.com/MichengAI/dsh-skills-manager/issues) for bugs or suggestions. Include your DSH and plugin versions, reproduction steps, and a full screenshot for UI issues.
+[Open an issue](https://github.com/Jasun0925/dsh-skills-manager/issues) for bugs or suggestions. Include your DSH and plugin versions, reproduction steps, and a full screenshot for UI issues.
 
 Source code lives in `src` and uses strict TypeScript while retaining the existing plugin architecture. Run `npm run typecheck` for type checks, `npm run build` to generate runtime files, and `npm run verify` for the full regression and package checks. `lib` is not tracked in Git; packing automatically checks types and builds the JavaScript files required by the npm package. CI runs full verification on Node.js 22.19.0 and 24, and code changes also trigger the supported-host compatibility matrix. Contributions are welcome.
 

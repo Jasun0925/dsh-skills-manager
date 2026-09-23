@@ -1,10 +1,11 @@
 // 隔离目录验证新增来源、项目隔离、策略持久化及实际正文加载。
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const temp = await mkdtemp(join(tmpdir(), "dssm-project-sources-"));
+// macOS 的 tmpdir 经过 /var -> /private/var。项目根按真实路径折叠。
+const temp = await mkdtemp(join(await realpath(tmpdir()), "dssm-project-sources-"));
 process.env.HOME = join(temp, "home");
 process.env.USERPROFILE = join(temp, "home");
 for (const key of [

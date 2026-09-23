@@ -2,6 +2,9 @@ name: 同步 GitHub Release 说明
 
 on:
   workflow_call:
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write

@@ -11,6 +11,7 @@ import {
   stat,
   symlink,
   rename,
+  realpath,
 } from "node:fs/promises";
 import { createServer, request } from "node:http";
 import { basename, dirname, join, sep } from "node:path";
@@ -105,7 +106,8 @@ async function makeSkill(root, name, content) {
   return dir;
 }
 
-const tmp = await mkdtemp(join(tmpdir(), "dssm-test-"));
+// macOS 的 tmpdir 经过 /var -> /private/var。目录浏览、项目根和链接判定都按真实路径比较。
+const tmp = await mkdtemp(join(await realpath(tmpdir()), "dssm-test-"));
 const testUserHome = join(tmp, "home");
 process.env.HOME = testUserHome;
 process.env.USERPROFILE = testUserHome;
@@ -314,7 +316,7 @@ const clientSource = await readFile(
   "utf8",
 );
 ok(
-  clientBundle.includes('id: "@michengai/dsh-skills-manager"'),
+  clientBundle.includes('id: "@jasun0925/dsh-skills-manager"'),
   "client registers the scoped package module ID",
 );
 ok(

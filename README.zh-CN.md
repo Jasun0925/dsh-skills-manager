@@ -11,15 +11,15 @@
   [English](README.md) · [更新日志](CHANGELOG.zh-CN.md) · [Apache-2.0](LICENSE)
 
   [![许可证：Apache-2.0](https://img.shields.io/badge/许可证-Apache--2.0-blue.svg)](LICENSE)
-  [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
-  [![npm 下载量](https://img.shields.io/npm/dt/%40michengai%2Fdsh-skills-manager.svg?label=npm%20%E4%B8%8B%E8%BD%BD%E9%87%8F)](https://www.npmjs.com/package/@michengai/dsh-skills-manager)
-  [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-skills-manager)
+  [![npm package](https://img.shields.io/npm/v/%40jasun0925%2Fdsh-skills-manager.svg?label=npm%20package)](https://www.npmjs.com/package/@jasun0925/dsh-skills-manager)
+  [![npm 下载量](https://img.shields.io/npm/dt/%40jasun0925%2Fdsh-skills-manager.svg?label=npm%20%E4%B8%8B%E8%BD%BD%E9%87%8F)](https://www.npmjs.com/package/@jasun0925/dsh-skills-manager)
+  [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/Jasun0925/dsh-skills-manager)
   [![DSH 支持至 0.1.7-alpha.1](https://img.shields.io/badge/DSH-%E6%94%AF%E6%8C%81%E8%87%B3%200.1.7--alpha.1-2563eb.svg)](#安装)
 </div>
 
 > DSH Skills Manager 是社区维护的 DeepSeek Harness（DSH）插件，并非 DeepSeek AI 官方产品。
 
-本文对应 **1.1.0**。完整变更见[更新日志](CHANGELOG.zh-CN.md)与[最新发行说明](https://github.com/MichengAI/dsh-skills-manager/releases/latest)。
+本文对应 **1.1.0**。完整变更见[更新日志](CHANGELOG.zh-CN.md)与[最新发行说明](https://github.com/Jasun0925/dsh-skills-manager/releases/latest)。
 
 ## 功能概览
 
@@ -51,14 +51,14 @@
 
 需要已安装并能正常运行 DeepSeek Harness。以下命令使用 `web` profile，请按实际环境替换。
 
-插件安装支持 npm registry 和本地构建的 `.tgz` 包，不支持直接以 Git/GitHub 依赖安装（例如 `github:MichengAI/dsh-skills-manager`）。从源码开发时，请先安装开发依赖并构建，再加载到 DSH。
+插件安装支持 npm registry 和本地构建的 `.tgz` 包，不支持直接以 Git/GitHub 依赖安装（例如 `github:Jasun0925/dsh-skills-manager`）。从源码开发时，请先安装开发依赖并构建，再加载到 DSH。
 
 ### 让 Agent 帮你安装
 
 把这段话发给能够操作本机终端的 Agent：
 
 ```text
-请把 @michengai/dsh-skills-manager 最新版安装到我的 DSH web profile，使用官方 npm 源，安装后确认生效并告诉我如何重新加载。
+请把 @jasun0925/dsh-skills-manager 最新版安装到我的 DSH web profile，使用官方 npm 源，安装后确认生效并告诉我如何重新加载。
 ```
 
 ### 手动安装
@@ -66,7 +66,7 @@
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=https://registry.npmjs.org/
+dsh plugin --profile web add @jasun0925/dsh-skills-manager@latest --registry=https://registry.npmjs.org/
 ```
 
 安装后重启 DSH 并刷新页面，打开「设置 → 技能」即可使用。更新时可点击「检查更新」，或重新执行安装命令。
@@ -130,7 +130,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 | --- | --- |
 | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | 整理项目与会话、搜索任务、跳转对话轮次 |
 | [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | 按任务选择并召唤专业角色 |
-| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | 管理本机与项目技能，从仓库安装、更新和回退 |
+| [Skills Manager](https://github.com/Jasun0925/dsh-skills-manager) | 管理本机与项目技能，从仓库安装、更新和回退 |
 | [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | 搜索、恢复或清理已归档会话 |
 | [IM Connect](https://github.com/MichengAI/dsh-im-connect) | 从消息平台下任务、收回复 |
 | [Automation](https://github.com/MichengAI/dsh-automation) | 按计划执行任务，查看每次运行的结果 |
@@ -142,7 +142,7 @@ dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=htt
 
 ## 反馈与贡献
 
-遇到问题或有建议，欢迎[提交 Issue](https://github.com/MichengAI/dsh-skills-manager/issues)。请附上 DSH 与插件版本、复现步骤；界面问题可附完整截图。
+遇到问题或有建议，欢迎[提交 Issue](https://github.com/Jasun0925/dsh-skills-manager/issues)。请附上 DSH 与插件版本、复现步骤；界面问题可附完整截图。
 
 源码位于 `src`，使用严格 TypeScript，保留现有插件架构。开发时执行 `npm run typecheck` 检查类型，`npm run build` 生成运行产物，`npm run verify` 执行完整回归与打包验证。`lib` 不纳入 Git 提交；打包前会自动检查类型并构建，npm 安装包仍包含所需 JavaScript 产物。CI 在 Node.js 22.19.0 和 24 上执行完整验证，代码改动也会自动触发受支持宿主兼容矩阵。欢迎提交改进。
 

@@ -1,12 +1,13 @@
 // 使用确定的网络响应与隔离目录，验证仓库来源、安装和失败边界。
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { zipSync, strToU8 } from "fflate";
 import { promises as fileSystem } from "node:fs";
 
-const sandbox = await mkdtemp(join(tmpdir(), "dssm-repository-test-"));
+// macOS 的 tmpdir 经过 /var -> /private/var。技能目录会拒绝路径上的符号链接，沙箱必须落在真实目录。
+const sandbox = await mkdtemp(join(await realpath(tmpdir()), "dssm-repository-test-"));
 process.env.DSH_HOME = join(sandbox, "home");
 process.env.USERPROFILE = join(sandbox, "user");
 const { parseRepositoryInput, decodeRepositoryArchive, createRepositoryManager } = await import("../lib/repositories.js");

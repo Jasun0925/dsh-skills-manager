@@ -7,11 +7,13 @@ import {
   readFile,
   symlink,
   rm,
+  realpath,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const temp = await mkdtemp(join(tmpdir(), "dssm-discovery-"));
+// macOS 的 tmpdir 经过 /var -> /private/var。链接判定比较的是真实路径。
+const temp = await mkdtemp(join(await realpath(tmpdir()), "dssm-discovery-"));
 process.env.USERPROFILE = join(temp, "home");
 process.env.HOME = process.env.USERPROFILE;
 process.env.DSH_HOME = join(temp, "dsh");
