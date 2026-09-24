@@ -155,14 +155,14 @@ for (const key of literalTranslationKeys) {
   );
 }
 
-// 设置标题右侧与归档插件一致：项目主页和问题反馈均需使用各自对应的图标与链接。
+// 标题行右侧只留给检查更新，不再放 GitHub / Issues。
 ok(
   /className: "dssm-title-row"/.test(source),
-  "settings title uses a dedicated title row for external actions",
+  "settings title uses a dedicated title row",
 );
 ok(
   /className: "dssm-feedback-links"/.test(source),
-  "settings title groups the project and feedback links together",
+  "settings title keeps the update-check mount",
 );
 ok(
   (await readFile(new URL("../src/antd-ui.ts", import.meta.url), "utf8")).includes("ConfigProvider") &&
@@ -170,66 +170,16 @@ ok(
   "settings controls use Ant Design and follow the host color scheme",
 );
 ok(
-  /function GithubMark16\(\)/.test(source),
-  "project link defines the archive plugin GitHub brand icon",
+  !source.includes("function GithubMark16(") && !source.includes("function FeedbackIcon("),
+  "title row no longer defines GitHub or Issues icons",
 );
 ok(
-  /fill: "currentColor"/.test(source),
-  "project link GitHub icon follows the active theme color",
+  !source.includes("https://github.com/Jasun0925/dsh-skills-manager"),
+  "title row no longer links to the Skills Manager repository or issues",
 );
 ok(
-  /icon: h\(GithubMark16\)/.test(source),
-  "project link keeps the GitHub icon on an Ant Design button",
-);
-ok(
-  /icon: h\(FeedbackIcon\)/.test(source),
-  "feedback link keeps its icon on an Ant Design button",
-);
-ok(
-  !source.includes(".dssm-feedback-link{"),
-  "title links no longer use the old custom button chrome",
-);
-ok(
-  /href: "https:\/\/github\.com\/Jasun0925\/dsh-skills-manager", target: "_blank", rel: "noreferrer", "aria-label": t\("link\.project"\)/.test(
-    source,
-  ),
-  "project link points to the Skills Manager repository",
-);
-ok(
-  /href: "https:\/\/github\.com\/Jasun0925\/dsh-skills-manager\/issues"/.test(
-    source,
-  ),
-  "feedback link points to the Skills Manager issue tracker",
-);
-ok(
-  /target: "_blank", rel: "noreferrer", "aria-label": t\("link\.feedback"\)/.test(
-    source,
-  ),
-  "feedback link opens safely with a localized accessible name",
-);
-ok(
-  (source.match(/size: "small", shape: "default"/g) || []).length === 2,
-  "title links use small rectangular Ant Design buttons",
-);
-eq(
-  DICT.zh["link.project"],
-  "GitHub",
-  "Chinese project link copy matches the archive plugin",
-);
-eq(
-  DICT.en["link.project"],
-  "GitHub",
-  "English project link copy matches the archive plugin",
-);
-eq(
-  DICT.zh["link.feedback"],
-  "问题反馈",
-  "Chinese feedback link copy is concise and actionable",
-);
-eq(
-  DICT.en["link.feedback"],
-  "Issues",
-  "English feedback link copy matches the issue tracker destination",
+  !("link.project" in DICT.zh) && !("link.project" in DICT.en) && !("link.feedback" in DICT.zh) && !("link.feedback" in DICT.en),
+  "project and feedback link copy is removed from both locales",
 );
 ok(
   !("@deepseek-ai/dsh-client-runtime" in manifest.peerDependencies),
