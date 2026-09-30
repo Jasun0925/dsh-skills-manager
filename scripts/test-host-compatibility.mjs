@@ -315,6 +315,14 @@ try {
     await mkdir(path, { recursive: true });
     await writeFile(join(path, "SKILL.md"), `---\nname: compat-scoped\ndescription: 作用域回退测试\n---\n${body}\n`);
   }
+  // web 模板默认 live reload。旧宿主在没有 Cordis HMR 时会因此直接退出，验收还没连上。
+  // 补丁在启动时加载即可，不需要监视文件变化。
+  const profileManifestPath = join(env.DSH_HOME, "profiles", "web", "package.json");
+  const profileManifest = JSON.parse(await readFile(profileManifestPath, "utf8"));
+  profileManifest.dsh ??= {};
+  profileManifest.dsh.profile ??= {};
+  profileManifest.dsh.profile.patchReload = "startup";
+  await writeFile(profileManifestPath, `${JSON.stringify(profileManifest, null, 2)}\n`);
   host = spawn(
     process.execPath,
     [

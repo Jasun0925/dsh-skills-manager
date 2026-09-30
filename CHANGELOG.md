@@ -4,10 +4,11 @@
 
 ## Unreleased
 
-## 1.1.3 - 2026-09-30
+## 1.1.4 - 2026-09-30
 
 - Remove the GitHub and Issues links from the skills header.
 - Remove the screenshot sections from the English and Chinese READMEs, and keep only the English package description.
+- Host compatibility checks load user patches at startup, so older DeepSeek Harness releases boot without the Cordis HMR service.
 
 ## 1.1.2 - 2026-09-23
 
