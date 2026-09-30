@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+## 1.1.3 - 2026-09-30
+
+- Remove the GitHub and Issues links from the skills header.
+- Remove the screenshot sections from the English and Chinese READMEs, and keep only the English package description.
+
 ## 1.1.2 - 2026-09-23
 
 - A private Bitbucket repository whose public archive returns 404 is cloned over the local SSH key, using `git@bitbucket.org:owner/repo.git`. Hooks are disabled. The clone is read as files and is not executed.
