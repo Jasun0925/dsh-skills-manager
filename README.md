@@ -35,18 +35,6 @@ Bring skills from your computer and projects into DSH without switching between 
 
 - **Source tracking and updates**: distinguish local and repository skills, preview file changes, protect local edits, and confirm backup, update or rollback.
 
-## Screenshots
-
-Skill management:
-
-![Full skill management view](assets/screenshots/skills-manager-v2-preview.webp)
-
-Skill repositories:
-
-![Browse and install repository skills](assets/screenshots/skill-repositories.webp)
-
-*Screenshots show the pre-release 0.1.54 local build used to prepare 1.0.0. The final version adds refresh animation and progress feedback. Screenshots show only the feature panels, with real filenames and project directories cropped out of the background, and use lossless WebP.*
-
 ## Installation
 
 Requires a working DeepSeek Harness installation. The commands below use the `web` profile; replace it with yours if needed.
