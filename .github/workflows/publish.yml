@@ -40,6 +40,7 @@ jobs:
       - name: 发布前校验双语发行说明
         run: node scripts/extract-release-notes.mjs "$RELEASE_TAG" "$RUNNER_TEMP/release-notes.md"
 
+      - run: npm install -g npm@11
       - run: npm publish
 
   release-notes:
